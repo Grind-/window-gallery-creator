@@ -26,7 +26,7 @@ from apps.user_information.schemas import CreateNaturalPerson, CreateNaturalPers
 from apps.creator import blueprint
 from apps.creator.forms import NaturalPersonForm
 from flask.wrappers import Response
-from apps.creator.functions import gen_frames
+from apps.creator.functions import gen_frames, generate_frames_from_youtube
 
 
 @blueprint.route('/creator/<template>', methods=['GET', 'POST'])
@@ -88,7 +88,7 @@ def creator_template(template):
 
 @blueprint.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate_frames_from_youtube(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 @blueprint.route('/nac-uploader', methods=['GET', 'POST'])
