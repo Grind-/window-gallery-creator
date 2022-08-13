@@ -1,0 +1,16 @@
+eclipse.preferences.version=1
+encoding//apps/__init__.py=utf-8
+encoding//apps/authentication/__init__.py=utf-8
+encoding//apps/authentication/forms.py=utf-8
+encoding//apps/authentication/models.py=utf-8
+encoding//apps/authentication/routes.py=utf-8
+encoding//apps/authentication/util.py=utf-8
+encoding//apps/config.py=utf-8
+encoding//apps/creator/__init__.py=utf-8
+encoding//apps/creator/forms.py=utf-8
+encoding//apps/creator/routes.py=utf-8
+encoding//apps/home/__init__.py=utf-8
+encoding//apps/home/routes.py=utf-8
+encoding//apps/user_information/models.py=utf-8
+encoding/gunicorn-cfg.py=utf-8
+encoding/run.py=utf-8
