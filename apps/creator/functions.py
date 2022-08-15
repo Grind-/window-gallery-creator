@@ -19,7 +19,7 @@ import numpy as np
 import os
 import re
 from threading import Thread, Event
-
+from apps.util.youtube_downloader import YoutubeDownloader
 # Constants for LED strip and image processing
 pixel_pin = 13
 # pixel_pin = board.D18
@@ -35,6 +35,7 @@ camera = 0
 live = False
 resolution = (320, 240)
 url = 'https://www.youtube.com/watch?v=wr-rIz1-VG4'
+download_destination = 'video_temp'
 
 stop_play_event = Event()
 reset_play_event = Event()
@@ -134,22 +135,22 @@ class VideoToLed():
         self.clip_start_frame = 0
         self.clip_end_frame = 100000
         self.clip_duration = 0
+        self.frame_count = 0
+        self.fps = 0
         self.cap = cv2.VideoCapture()
+        self.video_name = ''
     
     def open_youtube_video(self, url: str):
         self.release()
-        video = pafy.new(url)
-        best  = video.getbest(preftype="mp4")
-        all_streams = video.allstreams  
-        mp4_list = [] 
-        for stream in all_streams:
-            if stream.extension=="mp4" and stream.mediatype=="normal":
-                mp4_list.append(stream)
-        lowest = getlowest(videostreams=mp4_list, preftype="mp4")
-        self.clip_duration = video.length       
-        #documentation: https://pypi.org/project/pafy/
-        
-        self.cap = cv2.VideoCapture(lowest.url)
+        self.release()
+        downloader = YoutubeDownloader()
+        downloader.choose_destination(download_destination)
+        self.video_name = downloader.download_video(url, 'low')
+
+        self.cap = cv2.VideoCapture(download_destination+'/'+self.video_name)
+        self.fps = self.cap.get(cv2. CAP_PROP_FPS) # OpenCV2 version 2 used "CV_CAP_PROP_FPS"
+        self.frame_count = int(self.cap.get(cv2. CAP_PROP_FRAME_COUNT))
+        self.clip_duration = self.frame_count/self.fps
         if (self.cap.isOpened()== False): 
             print("Error opening video stream or file")
         
@@ -164,16 +165,26 @@ class VideoToLed():
     def release(self):   
         self.cap.release()
         
-    def set_start_sec(self, sec: int):
-        frame_duration = self.clip_duration / self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
-        self.clip_start_frame = sec/frame_duration
+    def set_start_end_sec(self, start_sec: int, end_sec: int):
+        if end_sec and end_sec > start_sec:
+            self.clip_end_frame = self.fps*end_sec
+        self.clip_start_frame = self.fps*start_sec
+        from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
+        ffmpeg_extract_subclip(download_destination+'/'+self.video_name, self.clip_start_frame/self.fps, 
+                               self.clip_end_frame/self.fps, targetname=download_destination+'/cut'+self.video_name)
+
+        self.cap = cv2.VideoCapture(download_destination+'/cut'+self.video_name)
+        self.frame_count = int(self.cap.get(cv2. CAP_PROP_FRAME_COUNT))
+        self.clip_duration = self.frame_count/self.fps
     
-    def generate_frames(self):
+    def generate_video_frames(self):
         # Capture frame-by-frame
         self.is_playing = True
         while True:
+            time.sleep(1/self.fps)
             self.frame_counter += 1
             ret, frame = self.cap.read()
+            # frame = frame[:240,0:320] #CROP!!!
             if ret == True:
                 if self.stop_flag:
                     self.release()
@@ -218,3 +229,69 @@ def getlowest(videostreams, preftype="any", ftypestrict=True, vidonly=False):
 
         else:
             return r    
+        
+class VideoToLedBckup():
+    def __init__(self):
+        self.is_playing = False
+        self.restart_flag = False
+        self.stop_flag = False
+        self.frame_counter = 0
+        self.clip_start_frame = 0
+        self.clip_end_frame = 100000
+        self.clip_duration = 0
+        self.cap = cv2.VideoCapture()
+    
+    def open_youtube_video(self, url: str):
+        self.release()
+        video = pafy.new(url)
+        best  = video.getbest(preftype="mp4")
+        all_streams = video.allstreams  
+        mp4_list = [] 
+        for stream in all_streams:
+            if stream.extension=="mp4" and stream.mediatype=="normal":
+                mp4_list.append(stream)
+        lowest = getlowest(videostreams=mp4_list, preftype="mp4")
+        self.clip_duration = video.length       
+        #documentation: https://pypi.org/project/pafy/
+        
+        self.cap = cv2.VideoCapture(lowest.url)
+        if (self.cap.isOpened()== False): 
+            print("Error opening video stream or file")
+        
+    def stop(self):
+        self.stop_flag = True
+        self.is_playing = False
+        self.cap.release()
+        
+    def restart(self):
+        self.restart_flag = True
+     
+    def release(self):   
+        self.cap.release()
+        
+    def set_start_sec(self, sec: int):
+        frame_duration = self.clip_duration / self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        self.clip_start_frame = sec/frame_duration
+    
+    def generate_video_frames(self):
+        # Capture frame-by-frame
+        self.is_playing = True
+        while True:
+            self.frame_counter += 1
+            ret, frame = self.cap.read()
+            if ret == True:
+                if self.stop_flag:
+                    self.release()
+                    break
+                if self.frame_counter == self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.frame_counter == self.clip_end_frame or self.restart_flag:
+                    self.frame_counter = self.clip_start_frame #Or whatever as long as it is the same as next line
+                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    self.restart_flag = False
+                # transform to jpeg
+                ret, buffer = cv2.imencode('.jpg', frame)
+                frame = buffer.tobytes()
+                
+                yield  (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
+            else: 
+                return None

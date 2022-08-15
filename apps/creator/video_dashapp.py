@@ -39,18 +39,6 @@ led_ver = 30
 video_to_led = VideoToLed()
 video_to_led.open_youtube_video(url='https://www.youtube.com/watch?v=wr-rIz1-VG4')
 
-class VideoCamera(object):
-    def __init__(self):
-        self.video = cv2.VideoCapture(0)
-
-    def __del__(self):
-        self.video.release()
-
-    def get_frame(self):
-        success, image = self.video.read()
-        ret, jpeg = cv2.imencode('.jpg', image)
-        return jpeg.tobytes()
-
         
 def get_layout():
     layout = dbc.Container([
@@ -96,16 +84,14 @@ def get_layout():
         dbc.Row([
             dbc.Col([
                 dcc.Loading(
-                   # html.Div(id=f'{APP_ID}_image_div')
-                    html.Div([
-                        html.Div(id=f'{APP_ID}_video_feed')
-                        # html.Img(src="/dashapp/video_feed", style={'width': '40%', 'padding': 10})
-                    ])
+                    html.Div(
+                        html.Div(id=f'{APP_ID}_udate_video')
+                    )
                 ),
             ]),
             dbc.Col(
                 dcc.Loading(
-                    html.Div(id=f'{APP_ID}_video_div')
+                    html.Div(id=f'{APP_ID}_led_effect')
                 ),
             )
         ]),
@@ -138,12 +124,29 @@ def add_video_editing_dashboard(dash_app):
         if dic_of_names is None:
             return True, 0., None, None
 
-        clip_1 = mpy.VideoFileClip(dic_of_names[list(dic_of_names)[0]])
+        clip = mpy.VideoFileClip(dic_of_names[list(dic_of_names)[0]])
 
-        return False, 0., clip_1.duration, clip_1.size[0]
+        return False, 0., clip.duration, clip.size[0]
+
+
+    @dash_app.callback(
+        Output(f'{APP_ID}_led_effect', 'children'),
+        [
+            Input(f'{APP_ID}_vid_w_input', 'value'),
+            Input(f'{APP_ID}_large_upload_fn_store', 'data'),
+            Input(f'{APP_ID}_t_start_input', 'value'),
+            Input(f'{APP_ID}_t_end_input', 'value'),
+            Input(f'{APP_ID}_crop_bot_input', 'value'),
+            Input(f'{APP_ID}_crop_top_input', 'value'),
+        ],
+    )
+    def led_effect(video_width, dic_of_names, clip_start, clip_end, crop_bot, crop_top):
+        # video_to_led.set_start_sec(clip_start)
+        # return html.Img(src=f'{URL_BASE}led_feed/{video_width}', style={'width': '100%', 'padding': 10})
+        return None
     
     
-    @dash_app.callback(Output(f'{APP_ID}video_feed', 'children'),
+    @dash_app.callback(Output(f'{APP_ID}_udate_video', 'children'),
             [
                 Input(f'{APP_ID}_vid_w_input', 'value'),
                 Input(f'{APP_ID}_large_upload_fn_store', 'data'),
@@ -152,15 +155,22 @@ def add_video_editing_dashboard(dash_app):
                 Input(f'{APP_ID}_crop_bot_input', 'value'),
                 Input(f'{APP_ID}_crop_top_input', 'value'),
             ])
-    def video_feed(video_width, dic_of_names, clip_1_start, clip_1_end, crop_bot, crop_top):
-        video_to_led.set_start_sec(clip_1_start)
-        return html.Img(src=f'{URL_BASE}video_feed/reset', style={'width': '40%', 'padding': 10})
+    def update_video(video_width, dic_of_names, clip_start, clip_end, crop_bot, crop_top):
+        video_to_led.set_start_end_sec(clip_start, clip_end)
+        return html.Img(src=f'{URL_BASE}video_feed/{video_width}', style={'width': '100%', 'padding': 10})
         
-    @dash_app.server.route(f'{URL_BASE}video_feed/<reset_value>')
-    def video_feed_endpoint():
+    @dash_app.server.route(f'{URL_BASE}video_feed/<value>')
+    def video_feed(value):
         if video_to_led.is_playing:
             video_to_led.restart()
-        return Response(video_to_led.generate_frames(),
+        return Response(video_to_led.generate_video_frames(),
+                        mimetype='multipart/x-mixed-replace; boundary=frame')
+        
+    @dash_app.server.route(f'{URL_BASE}led_feed/<value>')
+    def led_feed(value):
+        if video_to_led.is_playing:
+            video_to_led.restart()
+        return Response(video_to_led.generate_led_frames(),
                         mimetype='multipart/x-mixed-replace; boundary=frame')
         
     @dash_app.server.route('/downloads/<path:path>')
@@ -185,7 +195,7 @@ def init_dash(server):
                     url_base_pathname=URL_BASE,
                     external_stylesheets=external_stylesheets)
     dash_app.config['suppress_callback_exceptions'] = True
-    du.configure_upload(dash_app, Path.cwd() / Path("temp"), True, URL_BASE+"API/resumable")
+    du.configure_upload(dash_app, Path.cwd() / Path("video_temp"), use_upload_id=False, upload_api=URL_BASE+"API/resumable")
     
     dash_app.layout = get_layout()
     dash_app = add_video_editing_dashboard(dash_app)
