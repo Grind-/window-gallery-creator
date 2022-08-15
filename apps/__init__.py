@@ -5,10 +5,9 @@ Copyright (c) 2019 - present AppSeed.us
 
 from importlib import import_module
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
-
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -42,4 +41,7 @@ def create_app(config):
     register_extensions(app)
     register_blueprints(app)
     configure_database(app)
+    
+    from apps.creator.video_dashapp import init_dash
+    app = init_dash(app)
     return app

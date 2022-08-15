@@ -6,18 +6,19 @@ from copy import deepcopy
 from datetime import datetime
 from json import dump, dumps
 
-from flask import render_template, redirect, request, url_for
+from flask import render_template, redirect, request, url_for, send_from_directory
 from flask_login import (
     current_user,
     login_user,
     logout_user
 )
+
 from flask_login import login_required
 from jinja2 import TemplateNotFound
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 from werkzeug.utils import secure_filename
-
+from pathlib import Path
 from apps import db, login_manager
 from apps.authentication.models import User
 from apps.user_information.models import NaturalPerson
@@ -26,8 +27,7 @@ from apps.user_information.schemas import CreateNaturalPerson, CreateNaturalPers
 from apps.creator import blueprint
 from apps.creator.forms import NaturalPersonForm
 from flask.wrappers import Response
-from apps.creator.functions import gen_frames, generate_frames_from_youtube
-
+from apps.creator import video_dashapp
 
 @blueprint.route('/creator/<template>', methods=['GET', 'POST'])
 @login_required
@@ -74,23 +74,23 @@ def creator_template(template):
     except:
         return render_template('home/page-500.html'), 500
 
-# def gen_frames():  
-#     while True:
-#         success, frame = camera.read()  # read the camera frame
-#         if not success:
-#             break
-#         else:
-#             ret, buffer = cv2.imencode('.jpg', frame)
-#             frame = buffer.tobytes()
-#             yield (b'--frame\r\n'
-#                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
 
 
-@blueprint.route('/video_feed')
-def video_feed():
-    return Response(generate_frames_from_youtube(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@blueprint.route('/videoapp')
+def videoapp():
+    return render_template('creator/videoapp.html', dash_url=video_dashapp.URL_BASE, min_height=video_dashapp.MIN_HEIGHT)
 
 
+@blueprint.route('/downloads/<path:path>')
+def serve_static(path):
+    return send_from_directory(
+        Path("downloads"), path, as_attachment=True
+            )
+
+
+
+    
 @blueprint.route('/nac-uploader', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':

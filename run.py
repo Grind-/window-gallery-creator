@@ -25,6 +25,7 @@ except KeyError:
     exit('Error: Invalid <config_mode>. Expected values [Debug, Production] ')
 
 app = create_app(app_config)
+app.config['suppress_callback_exceptions'] = True
 Migrate(app, db)
 
 if DEBUG:
