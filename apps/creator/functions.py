@@ -134,6 +134,12 @@ class VideoToLed():
         self.frame_counter = 0
         self.clip_start_frame = 0
         self.clip_end_frame = 100000
+        self.clip_width = 0
+        self.clip_height = 0
+        self.crop_top = 0
+        self.crop_bot = 0
+        self.crop_left = 0
+        self.crop_right = 0
         self.clip_duration = 0
         self.frame_count = 0
         self.fps = 0
@@ -148,6 +154,8 @@ class VideoToLed():
         self.video_name = downloader.download_video(url, 'low')
 
         self.cap = cv2.VideoCapture(download_destination+'/'+self.video_name)
+        self.clip_width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.clip_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) 
         self.fps = self.cap.get(cv2. CAP_PROP_FPS) # OpenCV2 version 2 used "CV_CAP_PROP_FPS"
         self.frame_count = int(self.cap.get(cv2. CAP_PROP_FRAME_COUNT))
         self.clip_duration = self.frame_count/self.fps
@@ -164,6 +172,16 @@ class VideoToLed():
      
     def release(self):   
         self.cap.release()
+        
+    def crop(self, top: int, bot: int, left: int, right: int):
+        if top >= 0 and top < self.clip_height - self.crop_bot:
+            self.crop_top = top
+        if bot >= 0 and self.clip_height - bot > self.crop_top:
+            self.crop_bot = bot
+        if right >= 0 and self.clip_width - right > self.crop_left:
+            self.crop_right = right
+        if left >= 0 and - left < self.clip_width - right:
+            self.crop_left = left
         
     def set_start_end_sec(self, start_sec: int, end_sec: int):
         if end_sec and end_sec > start_sec:
@@ -184,8 +202,11 @@ class VideoToLed():
             time.sleep(1/self.fps)
             self.frame_counter += 1
             ret, frame = self.cap.read()
-            # frame = frame[:240,0:320] #CROP!!!
+            
             if ret == True:
+                frame = frame[self.crop_bot:self.clip_height - self.crop_top , 
+                          self.crop_left:self.clip_width - self.crop_right] # TODO ???
+                
                 if self.stop_flag:
                     self.release()
                     break
@@ -202,33 +223,7 @@ class VideoToLed():
             else: 
                 return None
 
-def getlowest(videostreams, preftype="any", ftypestrict=True, vidonly=False):
-        """
-        Return the highest resolution video available.
 
-        Select from video-only streams if vidonly is True
-        """
-        streams = videostreams
-
-        if not streams:
-            return None
-
-        def _sortkey(x, key3d=0, keyres=0, keyftype=0):
-            """ sort function for max(). """
-            key3d = "3D" not in x.resolution
-            keyres = int(x.resolution.split("x")[0])
-            keyftype = preftype == x.extension
-            strict = (key3d, keyftype, keyres)
-            nonstrict = (key3d, keyres, keyftype)
-            return strict if ftypestrict else nonstrict
-
-        r = min(streams, key=_sortkey)
-
-        if ftypestrict and preftype != "any" and r.extension != preftype:
-            return None
-
-        else:
-            return r    
         
 class VideoToLedBckup():
     def __init__(self):

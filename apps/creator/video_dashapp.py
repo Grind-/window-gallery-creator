@@ -53,6 +53,10 @@ def get_layout():
                 dbc.FormGroup([
                     dbc.Label('Crop Bottom (px)'),
                     dbc.Input(id=f'{APP_ID}_crop_bot_input', type='number', value=0)
+                ]),
+                dbc.FormGroup([
+                    dbc.Label('Crop Left (px)'),
+                    dbc.Input(id=f'{APP_ID}_crop_left_input', type='number', value=0)
                 ])
             ]),
             dbc.Col([
@@ -63,6 +67,10 @@ def get_layout():
                 dbc.FormGroup([
                     dbc.Label('Crop Top (px)'),
                     dbc.Input(id=f'{APP_ID}_crop_top_input', type='number', value=0)
+                ]),
+                dbc.FormGroup([
+                    dbc.Label('Crop Right (px)'),
+                    dbc.Input(id=f'{APP_ID}_crop_right_input', type='number', value=0)
                 ])
             ]),
             dbc.Col([
@@ -138,9 +146,11 @@ def add_video_editing_dashboard(dash_app):
             Input(f'{APP_ID}_t_end_input', 'value'),
             Input(f'{APP_ID}_crop_bot_input', 'value'),
             Input(f'{APP_ID}_crop_top_input', 'value'),
+            Input(f'{APP_ID}_crop_left_input', 'value'),
+            Input(f'{APP_ID}_crop_right_input', 'value'),
         ],
     )
-    def led_effect(video_width, dic_of_names, clip_start, clip_end, crop_bot, crop_top):
+    def led_effect(video_width, dic_of_names, clip_start, clip_end, crop_bot, crop_top, crop_left, crop_right):
         # video_to_led.set_start_sec(clip_start)
         # return html.Img(src=f'{URL_BASE}led_feed/{video_width}', style={'width': '100%', 'padding': 10})
         return None
@@ -154,10 +164,13 @@ def add_video_editing_dashboard(dash_app):
                 Input(f'{APP_ID}_t_end_input', 'value'),
                 Input(f'{APP_ID}_crop_bot_input', 'value'),
                 Input(f'{APP_ID}_crop_top_input', 'value'),
+                Input(f'{APP_ID}_crop_left_input', 'value'),
+                Input(f'{APP_ID}_crop_right_input', 'value'),
             ])
-    def update_video(video_width, dic_of_names, clip_start, clip_end, crop_bot, crop_top):
+    def update_video(video_width, dic_of_names, clip_start, clip_end, crop_bot, crop_top, crop_left, crop_right):
         video_to_led.set_start_end_sec(clip_start, clip_end)
-        return html.Img(src=f'{URL_BASE}video_feed/{video_width}', style={'width': '100%', 'padding': 10})
+        video_to_led.crop(crop_bot, crop_top, crop_left, crop_right)
+        return html.Img(src=f'{URL_BASE}video_feed/{video_width}', style={'width': '120%'})
         
     @dash_app.server.route(f'{URL_BASE}video_feed/<value>')
     def video_feed(value):
