@@ -136,10 +136,11 @@ class VideoToLed():
         self.clip_end_frame = 100000
         self.clip_width = 0
         self.clip_height = 0
-        self.crop_top = 0
-        self.crop_bot = 0
-        self.crop_left = 0
-        self.crop_right = 0
+        self.rect_top = 0
+        self.rect_bot = 0
+        self.rect_left = 0
+        self.rect_right = 0
+        self.rect_thickness = 0
         self.clip_duration = 0
         self.frame_count = 0
         self.fps = 0
@@ -173,15 +174,17 @@ class VideoToLed():
     def release(self):   
         self.cap.release()
         
-    def crop(self, top: int, bot: int, left: int, right: int):
-        if top >= 0 and top < self.clip_height - self.crop_bot:
-            self.crop_top = top
-        if bot >= 0 and self.clip_height - bot > self.crop_top:
-            self.crop_bot = bot
-        if right >= 0 and self.clip_width - right > self.crop_left:
-            self.crop_right = right
-        if left >= 0 and - left < self.clip_width - right:
-            self.crop_left = left
+    def set_rectangle(self, top: int, bot: int, left: int, right: int, thickness: int):
+        if top >= 0 and top < self.clip_height - self.rect_bot:
+            self.rect_top = top
+        if bot >= 0 and self.clip_height - bot > self.rect_top:
+            self.rect_bot = bot
+        if right >= 0 and self.clip_width - right > self.rect_left:
+            self.rect_right = right
+        if left >= 0 and - left < self.clip_width - self.rect_right:
+            self.rect_left = left
+        self.rect_thickness = thickness
+        
         
     def set_start_end_sec(self, start_sec: int, end_sec: int):
         if end_sec and end_sec > start_sec:
@@ -204,8 +207,19 @@ class VideoToLed():
             ret, frame = self.cap.read()
             
             if ret == True:
-                frame = frame[self.crop_bot:self.clip_height - self.crop_top , 
-                          self.crop_left:self.clip_width - self.crop_right] # TODO ???
+                # frame = frame[self.crop_bot:self.clip_height - self.crop_top , 
+                #           self.crop_left:self.clip_width - self.crop_right] # TODO ???
+                
+                rect_start_point = (self.rect_left, self.rect_bot)
+                rect_end_point = (self.clip_width - self.rect_right, self.clip_height - self.rect_top)
+                rect_thickness = self.rect_thickness
+                color = (255, 0, 0)
+                
+                overlay = frame.copy()
+                alpha = 0.4
+
+                overlay = cv2.rectangle(overlay, rect_start_point, rect_end_point, color, rect_thickness)
+                frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
                 
                 if self.stop_flag:
                     self.release()
@@ -222,6 +236,26 @@ class VideoToLed():
                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
             else: 
                 return None
+            
+    def generate_led_arrays(self, frame):
+
+        resized_hor = np.array(cv2.resize(frame, 
+                                          dsize=(led_hor, self.clip_height/self.rect_thickness), 
+                                          interpolation=cv2.INTER_CUBIC))
+        resized_ver = np.array(cv2.resize(frame, 
+                                          dsize=(self.clip_width/self.rect_thickness, led_ver), 
+                                          interpolation=cv2.INTER_CUBIC))
+        
+        if mirrow == True:
+            frame = cv2.flip(frame, 1)
+
+        # resized = np.array(cv2.resize(frame, dsize=(led_hor, led_ver), interpolation=cv2.INTER_CUBIC))
+        line_up = resized_hor[0, :]
+        line_down = resized_hor[led_ver - 1, :]
+        line_left = resized_ver[:, 0]
+        line_right = resized_ver[:, led_hor - 1]
+        return [line_up, line_down, line_left, line_right]
+        
 
 
         

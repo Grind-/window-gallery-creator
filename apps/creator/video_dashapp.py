@@ -75,8 +75,8 @@ def get_layout():
             ]),
             dbc.Col([
                 dbc.FormGroup([
-                    dbc.Label('Video Width (px)'),
-                    dbc.Input(id=f'{APP_ID}_vid_w_input', type='number')
+                    dbc.Label('Thickness (px)'),
+                    dbc.Input(id=f'{APP_ID}_thickness_input', type='number')
                 ])
             ])
     
@@ -122,7 +122,7 @@ def add_video_editing_dashboard(dash_app):
             Output(f'{APP_ID}_process_video_button', 'disabled'),
             Output(f'{APP_ID}_t_start_input', 'value'),
             Output(f'{APP_ID}_t_end_input', 'value'),
-            Output(f'{APP_ID}_vid_w_input', 'value')
+            Output(f'{APP_ID}_thickness_input', 'value')
         ],
         [
             Input(f'{APP_ID}_large_upload_fn_store', 'data'),
@@ -140,7 +140,7 @@ def add_video_editing_dashboard(dash_app):
     @dash_app.callback(
         Output(f'{APP_ID}_led_effect', 'children'),
         [
-            Input(f'{APP_ID}_vid_w_input', 'value'),
+            Input(f'{APP_ID}_thickness_input', 'value'),
             Input(f'{APP_ID}_large_upload_fn_store', 'data'),
             Input(f'{APP_ID}_t_start_input', 'value'),
             Input(f'{APP_ID}_t_end_input', 'value'),
@@ -158,7 +158,7 @@ def add_video_editing_dashboard(dash_app):
     
     @dash_app.callback(Output(f'{APP_ID}_udate_video', 'children'),
             [
-                Input(f'{APP_ID}_vid_w_input', 'value'),
+                Input(f'{APP_ID}_thickness_input', 'value'),
                 Input(f'{APP_ID}_large_upload_fn_store', 'data'),
                 Input(f'{APP_ID}_t_start_input', 'value'),
                 Input(f'{APP_ID}_t_end_input', 'value'),
@@ -167,10 +167,10 @@ def add_video_editing_dashboard(dash_app):
                 Input(f'{APP_ID}_crop_left_input', 'value'),
                 Input(f'{APP_ID}_crop_right_input', 'value'),
             ])
-    def update_video(video_width, dic_of_names, clip_start, clip_end, crop_bot, crop_top, crop_left, crop_right):
+    def update_video(thickness, dic_of_names, clip_start, clip_end, crop_bot, crop_top, crop_left, crop_right):
         video_to_led.set_start_end_sec(clip_start, clip_end)
-        video_to_led.crop(crop_bot, crop_top, crop_left, crop_right)
-        return html.Img(src=f'{URL_BASE}video_feed/{video_width}', style={'width': '120%'})
+        video_to_led.set_rectangle(crop_bot, crop_top, crop_left, crop_right, thickness)
+        return html.Img(src=f'{URL_BASE}video_feed/{thickness}', style={'height': '380px'})
         
     @dash_app.server.route(f'{URL_BASE}video_feed/<value>')
     def video_feed(value):
