@@ -21,6 +21,7 @@ import re
 from threading import Thread, Event
 from apps.util.youtube_downloader import YoutubeDownloader
 from scipy.ndimage import interpolation
+import os.path
 
 # Constants for LED strip and image processing
 pixel_pin = 13
@@ -129,6 +130,7 @@ def capture_from_youtube(capture_time):
 
 class VideoToLed():
     def __init__(self):
+        self.led_array = []
         self.is_playing = False
         self.restart_flag = False
         self.stop_flag = False
@@ -150,18 +152,13 @@ class VideoToLed():
         self.led_hor = 25
         self.led_ver = 30
         self.pause_flag = False
+        self.record_flag = False
         
     def get_clip_duration(self):
         return self.clip_duration
     
-    def open_youtube_video(self, url: str):
-        self.release()
-        self.release()
-        downloader = YoutubeDownloader()
-        downloader.choose_destination(download_destination)
-        self.video_name = downloader.download_video(url, 'low')
-
-        self.cap = cv2.VideoCapture(download_destination+'/'+self.video_name)
+    def open_video(self):
+        
         self.clip_width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.clip_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) 
         self.fps = self.cap.get(cv2. CAP_PROP_FPS) # OpenCV2 version 2 used "CV_CAP_PROP_FPS"
@@ -169,13 +166,32 @@ class VideoToLed():
         self.clip_duration = self.frame_count/self.fps
         if (self.cap.isOpened()== False): 
             print("Error opening video stream or file")
-    
+            
+    def open_youtube_video(self, url: str):
+        self.release()
+        downloader = YoutubeDownloader()
+        downloader.choose_destination(download_destination)
+        self.video_name = downloader.download_video(url, 'low')
+        self.cap = cv2.VideoCapture(download_destination+'/'+self.video_name)
+        self.open_video()
+        
+    def open_video_from_file(self, path, filename):
+        filepath = os.path.join(path, filename)
+        self.cap = cv2.VideoCapture(filepath)
+        self.video_name = filename
+        self.open_video()
+        
+    def record(self):
+        self.record_flag = True
+        
     def pause(self):
         self.pause_flag = True
+        
     def play(self):
         self.pause_flag = False
         
     def stop(self):
+        self.record_flag = False
         self.stop_flag = True
         self.is_playing = False
         self.cap.release()
@@ -210,7 +226,7 @@ class VideoToLed():
         self.frame_count = int(self.cap.get(cv2. CAP_PROP_FRAME_COUNT))
         self.clip_duration = self.frame_count/self.fps
     
-    def generate_video_frames(self):
+    def start(self):
         # Capture frame-by-frame
         self.is_playing = True
         while True:
@@ -316,6 +332,12 @@ class VideoToLed():
         line_left = resized_ver[:, 0]
         line_right = resized_ver[:, -1]
         
+        if self.record_flag == True:
+            self.led_array.append(np.stack([np.flip(line_bot), 
+                                           np.flip(line_left), 
+                                           line_top,   
+                                           line_right]))
+            
         return [line_top, line_bot, line_left, line_right]
      
     def generate_led_image(self, led_arrays: []):
@@ -328,10 +350,11 @@ class VideoToLed():
         for i in range (5):
             img[-1-i, :] =  led_arrays[0]/i
             img[i, :] = led_arrays[1]/i
-            img[:, i] = np.flip(led_arrays[3]/i)
-            img[:, -1-i] = np.flip(led_arrays[2]/i) 
+            img[:, -1-i] = led_arrays[3]/i
+            img[:, i] = led_arrays[2]/i
         
-        img = cv2.resize(img, dsize=(self.clip_width, self.clip_height), interpolation=cv2.INTER_CUBIC)
+        img = cv2.resize(img[1:size_vertical-1, 1:size_horizontal-1], 
+                         dsize=(self.clip_width, self.clip_height), interpolation=cv2.INTER_CUBIC)
         return img
             
         

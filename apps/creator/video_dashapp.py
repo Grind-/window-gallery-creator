@@ -29,41 +29,38 @@ from quart import Quart, websocket
 import pafy
 from apps.creator.functions import VideoToLed
 
-APP_ID = 'user_large_video'
+APP_ID = 'windwow_gallery_creator'
 URL_BASE = '/dashapp/'
 MIN_HEIGHT = 600
 n_streams=1
 led_hor = 30
 led_ver = 30
 video_to_led = VideoToLed()
-video_to_led.open_youtube_video(url='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler')
+video_to_led.open_video_from_file(path="video_temp", filename="color stripes.mp4")
+# (url='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler')
 
         
 def get_layout():
     layout = dbc.Container([
+        
         dbc.FormGroup([
             dbc.Row([
-                dbc.Label('Paste a Youtube Link here and press ok:  '),
-
-                dcc.Input(id="input1", type="url", 
+                dbc.Label('Paste a Youtube Link here and press load:  '),
+                dcc.Input(id=f'{APP_ID}_youtube_url', type='url', 
                           placeholder='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler',
-                          ),
+                          debounce=True),
+                dbc.Button('load', id=f'{APP_ID}_youtube_load_button', color='primary', 
+                           disabled=False, n_clicks=0),
+                dbc.Row([html.P(id=f'{APP_ID}_status'),]),
                 ]),
-            ]),
+        ]),
         dbc.Label('or drag and drop a video file here'),
         dcc.Store(id=f'{APP_ID}_large_upload_fn_store'),
         du.Upload(id=f'{APP_ID}_large_upload', max_file_size=5120),
         dbc.Row([
 
         ]), 
-        # dbc.ButtonGroup([
-        #     dbc.Button('Process Video', id=f'{APP_ID}_process_video_button', color='primary', disabled=True),
-        #     html.A(
-        #         dbc.Button('Download Video', id=f'{APP_ID}_download_button', color='primary', disabled=True),
-        #         id=f'{APP_ID}_download_link',
-        #         href=''
-        #     )
-        # ]),
+        
         dbc.Row([
             dbc.Col([
                 dcc.Loading(
@@ -72,6 +69,7 @@ def get_layout():
                     )
                 ),
             ]),
+        
             dbc.Col([
                 dbc.FormGroup([
                     dbc.Label('Rect Bottom (px)'),
@@ -117,10 +115,19 @@ def get_layout():
                 ]),
             dbc.FormGroup([
                 dbc.Label('Thickness (px)'),
-                dcc.Slider(0, 20, 1, id=f'{APP_ID}_thickness_input', marks=None, value=2,
-                            tooltip={"placement": "bottom", "always_visible": False}),
+                dcc.Slider(0, 20, 1, id=f'{APP_ID}_thickness_input', marks=None, value=4,
+                            tooltip={"placement": "bottom", "always_visible": False}, 
+                            disabled=True),
                 ])
             ]),
+        ]),
+        dbc.ButtonGroup([
+            dbc.Button('Record', id=f'{APP_ID}_record_button', color='primary', disabled=False),
+            html.A(
+                dbc.Button('Download Sequence', id=f'{APP_ID}_download_button', color='primary', disabled=False),
+                id=f'{APP_ID}_download_link',
+                href=''
+            )
         ]),
     ])
     return layout
@@ -138,7 +145,7 @@ def add_video_editing_dashboard(dash_app):
 
     @dash_app.callback(
         [
-            Output(f'{APP_ID}_process_video_button', 'disabled'),
+            # Output(f'{APP_ID}_process_video_button', 'disabled'),
             Output(f'{APP_ID}_t_start_input', 'value'),
             Output(f'{APP_ID}_t_end_input', 'value'),
             Output(f'{APP_ID}_thickness_input', 'value')
@@ -154,25 +161,6 @@ def add_video_editing_dashboard(dash_app):
         clip = mpy.VideoFileClip(dic_of_names[list(dic_of_names)[0]])
 
         return False, 0., clip.duration, clip.size[0]
-
-
-    @dash_app.callback(
-        Output(f'{APP_ID}_led_effect', 'children'),
-        [
-            Input(f'{APP_ID}_thickness_input', 'value'),
-            Input(f'{APP_ID}_large_upload_fn_store', 'data'),
-            Input(f'{APP_ID}_t_start_input', 'value'),
-            Input(f'{APP_ID}_t_end_input', 'value'),
-            Input(f'{APP_ID}_rect_bot_input', 'value'),
-            Input(f'{APP_ID}_rect_top_input', 'value'),
-            Input(f'{APP_ID}_rect_left_input', 'value'),
-            Input(f'{APP_ID}_rect_right_input', 'value'),
-        ],
-    )
-    def led_effect(video_width, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right):
-        # video_to_led.set_start_sec(clip_start)
-        # return html.Img(src=f'{URL_BASE}led_feed/{video_width}', style={'width': '100%', 'padding': 10})
-        return None
     
     
     @dash_app.callback(Output(f'{APP_ID}_udate_video', 'children'),
@@ -192,20 +180,30 @@ def add_video_editing_dashboard(dash_app):
         video_to_led.set_rectangle(rect_bot, rect_top, rect_left, rect_right, thickness)
         video_to_led.play()
         return html.Img(src=f'{URL_BASE}video_feed/{thickness}', style={'width': '500px'})
+    
+    
+    
+    @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
+            [
+                Input(f'{APP_ID}_youtube_load_button', 'n_clicks'),
+                Input(f'{APP_ID}_youtube_url', 'value')
+            ])
+    def load_youtube_video(nclicks:int, url: str):
+        if url:
+            test = nclicks
+            video_to_led.pause()
+            video_to_led.open_youtube_video(url=url)
+            video_to_led.play()
+        return 'ok'
+    
         
     @dash_app.server.route(f'{URL_BASE}video_feed/<value>')
     def video_feed(value):
         if video_to_led.is_playing:
             video_to_led.restart()
-        return Response(video_to_led.generate_video_frames(),
+        return Response(video_to_led.start(),
                         mimetype='multipart/x-mixed-replace; boundary=frame')
         
-    @dash_app.server.route(f'{URL_BASE}led_feed/<value>')
-    def led_feed(value):
-        if video_to_led.is_playing:
-            video_to_led.restart()
-        return Response(video_to_led.generate_led_frames(),
-                        mimetype='multipart/x-mixed-replace; boundary=frame')
         
     @dash_app.server.route('/downloads/<path:path>')
     def serve_static(path):
