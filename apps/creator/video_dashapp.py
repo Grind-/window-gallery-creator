@@ -12,7 +12,7 @@ import asyncio
 import base64
 import cv2
 import threading
-
+import os.path
 from dash.dependencies import Output, Input
 from quart import Quart, websocket
 from dash_extensions import WebSocket
@@ -36,7 +36,7 @@ n_streams=1
 led_hor = 30
 led_ver = 30
 video_to_led = VideoToLed()
-video_to_led.open_video_from_file(path="video_temp", filename="color stripes.mp4")
+video_to_led.open_video_from_file(path=os.path.join('apps', 'static', 'assets', 'videos'), filename="color stripes.mp4")
 # (url='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler')
 
         
@@ -45,15 +45,15 @@ def get_layout():
         
         dbc.FormGroup([
             dbc.Row([
-                dbc.Label('Paste a Youtube Link here and press load:  '),
+                dbc.Label('Paste a Youtube Link here and press load (max 5 min):  '),
                 dcc.Input(id=f'{APP_ID}_youtube_url', type='url', 
                           placeholder='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler',
                           debounce=True),
                 dbc.Button('load', id=f'{APP_ID}_youtube_load_button', color='primary', 
                            disabled=False, n_clicks=0),
-                dbc.Row([html.P(id=f'{APP_ID}_status'),]),
                 ]),
         ]),
+        dbc.Row([html.P(id=f'{APP_ID}_status'),]),
         dbc.Label('or drag and drop a video file here'),
         dcc.Store(id=f'{APP_ID}_large_upload_fn_store'),
         du.Upload(id=f'{APP_ID}_large_upload', max_file_size=5120),
@@ -184,17 +184,15 @@ def add_video_editing_dashboard(dash_app):
     
     
     @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
-            [
                 Input(f'{APP_ID}_youtube_load_button', 'n_clicks'),
-                Input(f'{APP_ID}_youtube_url', 'value')
-            ])
+                State(f'{APP_ID}_youtube_url', 'value')
+                )
     def load_youtube_video(nclicks:int, url: str):
         if url:
-            test = nclicks
             video_to_led.pause()
-            video_to_led.open_youtube_video(url=url)
+            status = video_to_led.open_youtube_video(url=url)
             video_to_led.play()
-        return 'ok'
+        return status
     
         
     @dash_app.server.route(f'{URL_BASE}video_feed/<value>')

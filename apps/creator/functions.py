@@ -168,10 +168,14 @@ class VideoToLed():
             print("Error opening video stream or file")
             
     def open_youtube_video(self, url: str):
-        self.release()
+        video = pafy.new(url)
+        video_length = video.length
+        if video_length > 300:
+            return 'video is too long, choose one with less than 5 minutes'
         downloader = YoutubeDownloader()
         downloader.choose_destination(download_destination)
         self.video_name = downloader.download_video(url, 'low')
+        self.release()
         self.cap = cv2.VideoCapture(download_destination+'/'+self.video_name)
         self.open_video()
         
@@ -296,11 +300,7 @@ class VideoToLed():
         
         frame = frame[int(self.clip_height - frame_crop_top-rt/2) : int(self.clip_height - frame_crop_bot+rt/2), 
                           int(frame_crop_left+rt/2) : int(frame_crop_right-rt/2)]
-        
-        # line_top = np.sum(frame[frame_crop_top-rt:frame_crop_top+rt,:], axis = 0)/rt
-        # line_bot = np.sum(frame[frame_crop_bot-rt:frame_crop_bot+rt,:], axis = 0)/rt
-        # line_left = np.sum(frame[:,frame_crop_left-rt:frame_crop_left+rt], axis = 1)/rt
-        # line_right = np.sum(frame[:,frame_crop_right-rt:frame_crop_right+rt], axis = 1) /rt
+
         
         resized_hor = np.array(cv2.resize(frame, 
                                           dsize=(self.led_hor, int(self.clip_height/self.rect_thickness)), 
@@ -347,7 +347,7 @@ class VideoToLed():
         img.fill(5) # or img[:] = 255
         
         # adding light effect to shine into the center of the image
-        for i in range (5):
+        for i in range (2):
             img[-1-i, :] =  led_arrays[0]/i
             img[i, :] = led_arrays[1]/i
             img[:, -1-i] = led_arrays[3]/i
