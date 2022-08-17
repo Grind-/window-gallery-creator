@@ -11,7 +11,6 @@ from dash_extensions.enrich import Dash, ServersideOutput, Output, Input, State,
 import asyncio
 import base64
 import cv2
-import dash_html_components as html
 import threading
 
 from dash.dependencies import Output, Input
@@ -37,58 +36,34 @@ n_streams=1
 led_hor = 30
 led_ver = 30
 video_to_led = VideoToLed()
-video_to_led.open_youtube_video(url='https://www.youtube.com/watch?v=wr-rIz1-VG4')
+video_to_led.open_youtube_video(url='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler')
 
         
 def get_layout():
     layout = dbc.Container([
+        dbc.FormGroup([
+            dbc.Row([
+                dbc.Label('Paste a Youtube Link here and press ok:  '),
+
+                dcc.Input(id="input1", type="url", 
+                          placeholder='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler',
+                          ),
+                ]),
+            ]),
+        dbc.Label('or drag and drop a video file here'),
         dcc.Store(id=f'{APP_ID}_large_upload_fn_store'),
         du.Upload(id=f'{APP_ID}_large_upload', max_file_size=5120),
         dbc.Row([
-            dbc.Col([
-                dbc.FormGroup([
-                    dbc.Label('Subclip Start (s)'),
-                    dbc.Input(id=f'{APP_ID}_t_start_input', type='number')
-                ]),
-                dbc.FormGroup([
-                    dbc.Label('Crop Bottom (px)'),
-                    dbc.Input(id=f'{APP_ID}_crop_bot_input', type='number', value=0)
-                ]),
-                dbc.FormGroup([
-                    dbc.Label('Crop Left (px)'),
-                    dbc.Input(id=f'{APP_ID}_crop_left_input', type='number', value=0)
-                ])
-            ]),
-            dbc.Col([
-                dbc.FormGroup([
-                    dbc.Label('Subclip End(s)'),
-                    dbc.Input(id=f'{APP_ID}_t_end_input', type='number')
-                ]),
-                dbc.FormGroup([
-                    dbc.Label('Crop Top (px)'),
-                    dbc.Input(id=f'{APP_ID}_crop_top_input', type='number', value=0)
-                ]),
-                dbc.FormGroup([
-                    dbc.Label('Crop Right (px)'),
-                    dbc.Input(id=f'{APP_ID}_crop_right_input', type='number', value=0)
-                ])
-            ]),
-            dbc.Col([
-                dbc.FormGroup([
-                    dbc.Label('Thickness (px)'),
-                    dbc.Input(id=f'{APP_ID}_thickness_input', type='number')
-                ])
-            ])
-    
+
         ]), 
-        dbc.ButtonGroup([
-            dbc.Button('Process Video', id=f'{APP_ID}_process_video_button', color='primary', disabled=True),
-            html.A(
-                dbc.Button('Download Video', id=f'{APP_ID}_download_button', color='primary', disabled=True),
-                id=f'{APP_ID}_download_link',
-                href=''
-            )
-        ]),
+        # dbc.ButtonGroup([
+        #     dbc.Button('Process Video', id=f'{APP_ID}_process_video_button', color='primary', disabled=True),
+        #     html.A(
+        #         dbc.Button('Download Video', id=f'{APP_ID}_download_button', color='primary', disabled=True),
+        #         id=f'{APP_ID}_download_link',
+        #         href=''
+        #     )
+        # ]),
         dbc.Row([
             dbc.Col([
                 dcc.Loading(
@@ -97,11 +72,55 @@ def get_layout():
                     )
                 ),
             ]),
-            dbc.Col(
-                dcc.Loading(
-                    html.Div(id=f'{APP_ID}_led_effect')
-                ),
-            )
+            dbc.Col([
+                dbc.FormGroup([
+                    dbc.Label('Rect Bottom (px)'),
+                    dcc.Slider(0, video_to_led.clip_height, 1, 
+                               id=f'{APP_ID}_rect_bot_input', marks=None,
+                                tooltip={"placement": "bottom", "always_visible": False},
+                                value=4,),
+                ]),
+            dbc.FormGroup([
+                    dbc.Label('Rect Top (px)'),
+                    dcc.Slider(0, video_to_led.clip_height, 1, 
+                               id=f'{APP_ID}_rect_top_input', marks=None,
+                                tooltip={"placement": "bottom", "always_visible": False},
+                                value=4,),
+                ]), 
+            dbc.FormGroup([
+                    dbc.Label('Rect Left (px)'),
+                    dcc.Slider(0, video_to_led.clip_width - video_to_led.rect_right, 1, 
+                               id=f'{APP_ID}_rect_left_input', marks=None,
+                                tooltip={"placement": "bottom", "always_visible": False},
+                                value=4,),
+                ]),   
+            dbc.FormGroup([
+                    dbc.Label('Rect Right (px)'),
+                    dcc.Slider(0, video_to_led.clip_width, 1,
+                                id=f'{APP_ID}_rect_right_input', marks=None,
+                                tooltip={"placement": "bottom", "always_visible": False},
+                                value=4),
+                ]),
+            dbc.FormGroup([
+                    dbc.Label('Clip Start (sec)'),
+                    dcc.Slider(0, video_to_led.clip_width, 1, 
+                               id=f'{APP_ID}_t_start_input', marks=None,
+                                tooltip={"placement": "bottom", "always_visible": False},
+                                value=0,),
+                ]),
+            dbc.FormGroup([
+                    dbc.Label('Clip End (sec)'),
+                    dcc.Slider(0, video_to_led.clip_duration, 1, 
+                               id=f'{APP_ID}_t_end_input', marks=None,
+                                tooltip={"placement": "bottom", "always_visible": False}, 
+                                value=video_to_led.clip_duration),
+                ]),
+            dbc.FormGroup([
+                dbc.Label('Thickness (px)'),
+                dcc.Slider(0, 20, 1, id=f'{APP_ID}_thickness_input', marks=None, value=2,
+                            tooltip={"placement": "bottom", "always_visible": False}),
+                ])
+            ]),
         ]),
     ])
     return layout
@@ -144,13 +163,13 @@ def add_video_editing_dashboard(dash_app):
             Input(f'{APP_ID}_large_upload_fn_store', 'data'),
             Input(f'{APP_ID}_t_start_input', 'value'),
             Input(f'{APP_ID}_t_end_input', 'value'),
-            Input(f'{APP_ID}_crop_bot_input', 'value'),
-            Input(f'{APP_ID}_crop_top_input', 'value'),
-            Input(f'{APP_ID}_crop_left_input', 'value'),
-            Input(f'{APP_ID}_crop_right_input', 'value'),
+            Input(f'{APP_ID}_rect_bot_input', 'value'),
+            Input(f'{APP_ID}_rect_top_input', 'value'),
+            Input(f'{APP_ID}_rect_left_input', 'value'),
+            Input(f'{APP_ID}_rect_right_input', 'value'),
         ],
     )
-    def led_effect(video_width, dic_of_names, clip_start, clip_end, crop_bot, crop_top, crop_left, crop_right):
+    def led_effect(video_width, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right):
         # video_to_led.set_start_sec(clip_start)
         # return html.Img(src=f'{URL_BASE}led_feed/{video_width}', style={'width': '100%', 'padding': 10})
         return None
@@ -162,15 +181,17 @@ def add_video_editing_dashboard(dash_app):
                 Input(f'{APP_ID}_large_upload_fn_store', 'data'),
                 Input(f'{APP_ID}_t_start_input', 'value'),
                 Input(f'{APP_ID}_t_end_input', 'value'),
-                Input(f'{APP_ID}_crop_bot_input', 'value'),
-                Input(f'{APP_ID}_crop_top_input', 'value'),
-                Input(f'{APP_ID}_crop_left_input', 'value'),
-                Input(f'{APP_ID}_crop_right_input', 'value'),
+                Input(f'{APP_ID}_rect_bot_input', 'value'),
+                Input(f'{APP_ID}_rect_top_input', 'value'),
+                Input(f'{APP_ID}_rect_left_input', 'value'),
+                Input(f'{APP_ID}_rect_right_input', 'value'),
             ])
-    def update_video(thickness, dic_of_names, clip_start, clip_end, crop_bot, crop_top, crop_left, crop_right):
+    def update_video(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right):
+        video_to_led.pause()
         video_to_led.set_start_end_sec(clip_start, clip_end)
-        video_to_led.set_rectangle(crop_bot, crop_top, crop_left, crop_right, thickness)
-        return html.Img(src=f'{URL_BASE}video_feed/{thickness}', style={'height': '380px'})
+        video_to_led.set_rectangle(rect_bot, rect_top, rect_left, rect_right, thickness)
+        video_to_led.play()
+        return html.Img(src=f'{URL_BASE}video_feed/{thickness}', style={'width': '500px'})
         
     @dash_app.server.route(f'{URL_BASE}video_feed/<value>')
     def video_feed(value):
@@ -201,6 +222,7 @@ def init_dash(server):
     
     external_stylesheets = [
         dbc.themes.BOOTSTRAP,
+        dbc.themes.SLATE
     ]
     
     # Setup Dash app
@@ -215,66 +237,3 @@ def init_dash(server):
     
     return dash_app.server
 
-
-# def frame_out(video_width, dic_of_names, clip_1_start, clip_1_end, crop_bot, crop_top):
-#         if any([v is None for v in [video_width, dic_of_names, crop_bot, crop_top]]):
-#             raise PreventUpdate
-#
-#         clip_1 = mpy.VideoFileClip(dic_of_names[list(dic_of_names)[0]])
-#         clip_1 = clip_1.fx(mpy.vfx.resize, width=video_width)
-#         clip_1 = clip_1.subclip(t_start=clip_1_start, t_end=clip_1_end)
-#         clip_1 = clip_1.fx(mpy.vfx.crop, y1=crop_top, y2=clip_1.size[1]-crop_bot)
-#         # for image export in memory using PIL (for base64 convert), need to apply mask manually
-#         f = clip_1.fx(mpy.vfx.resize, width=540).get_frame(t=0)
-#
-#         im = Image.fromarray(f)
-#         rawBytes = io.BytesIO()
-#         im.save(rawBytes, "PNG")
-#         rawBytes.seek(0)
-#
-#         return html.Img(src=f"data:image/PNG;base64, {b64encode(rawBytes.read()).decode('utf-8')}")
-#
-#
-#
-#     @dash_app.callback(
-#         [
-#             Output(f'{APP_ID}_video_div', 'children'),
-#             Output(f'{APP_ID}_download_link', 'href'),
-#             Output(f'{APP_ID}_download_button', 'disabled'),
-#          ],
-#         [
-#             Input(f'{APP_ID}_process_video_button', 'n_clicks'),
-#         ],
-#         [
-#             State(f'{APP_ID}_large_upload_fn_store', 'data'),
-#             State(f'{APP_ID}_t_start_input', 'value'),
-#             State(f'{APP_ID}_t_end_input', 'value'),
-#             State(f'{APP_ID}_vid_w_input', 'value'),
-#             State(f'{APP_ID}_crop_bot_input', 'value'),
-#             State(f'{APP_ID}_crop_top_input', 'value'),
-#         ]
-#     )
-#     def process_pre_video(n_clicks, dic_of_names, clip_1_start, clip_1_end, video_width, crop_bot, crop_top):
-#         if n_clicks is None:
-#             raise PreventUpdate
-#
-#         if dic_of_names is None:
-#             return None
-#         clip_1 = mpy.VideoFileClip(dic_of_names[list(dic_of_names)[0]])
-#         clip_1 = clip_1.fx(mpy.vfx.resize, width=video_width)
-#         clip_1 = clip_1.subclip(t_start=clip_1_start, t_end=clip_1_end)
-#         clip_1 = clip_1.fx(mpy.vfx.crop, y1=crop_top, y2=clip_1.size[1]-crop_bot)
-#
-#         ffname = Path("downloads") / f'{str(uuid.uuid4())}.mp4'
-#         Path.mkdir(ffname.parent, parents=True, exist_ok=True)
-#         cvc = mpy.CompositeVideoClip([clip_1], bg_color=(255, 255, 255))
-#         # preview video set to 540 width and 5 fps
-#         fn_pre = '.'.join(str(ffname).split('.')[:-1]) + 'preview_.webm'
-#         cvc.fx(mpy.vfx.resize, width=540).write_videofile(fn_pre, audio=False, fps=5)
-#         # write full deal
-#         cvc.write_videofile(str(ffname), audio=False, fps=clip_1.fps)
-#
-#         vid = open(fn_pre, 'rb')
-#         base64_data = b64encode(vid.read())
-#         base64_string = base64_data.decode('utf-8')
-#         return [html.Video(src=f'data:video/webm;base64,{base64_string}', controls=True)], f'/{ffname}', False

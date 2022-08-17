@@ -20,6 +20,8 @@ import os
 import re
 from threading import Thread, Event
 from apps.util.youtube_downloader import YoutubeDownloader
+from scipy.ndimage import interpolation
+
 # Constants for LED strip and image processing
 pixel_pin = 13
 # pixel_pin = board.D18
@@ -28,13 +30,12 @@ led_hor = 16  # horizontal number of LEDs
 led_ver = 16  # vertical number of LEDs
 reduce_color_bit = 17  # decrease color bits factor
 contrast_factor = 10  # increase contrast
-mirrow = True
+mirrow = False
 frame_rate = 30
 capture_time = 20  # length of video in seconds
 camera = 0
 live = False
 resolution = (320, 240)
-url = 'https://www.youtube.com/watch?v=wr-rIz1-VG4'
 download_destination = 'video_temp'
 
 stop_play_event = Event()
@@ -140,12 +141,18 @@ class VideoToLed():
         self.rect_bot = 0
         self.rect_left = 0
         self.rect_right = 0
-        self.rect_thickness = 0
+        self.rect_thickness = 2
         self.clip_duration = 0
         self.frame_count = 0
         self.fps = 0
         self.cap = cv2.VideoCapture()
         self.video_name = ''
+        self.led_hor = 25
+        self.led_ver = 30
+        self.pause_flag = False
+        
+    def get_clip_duration(self):
+        return self.clip_duration
     
     def open_youtube_video(self, url: str):
         self.release()
@@ -162,6 +169,11 @@ class VideoToLed():
         self.clip_duration = self.frame_count/self.fps
         if (self.cap.isOpened()== False): 
             print("Error opening video stream or file")
+    
+    def pause(self):
+        self.pause_flag = True
+    def play(self):
+        self.pause_flag = False
         
     def stop(self):
         self.stop_flag = True
@@ -174,18 +186,18 @@ class VideoToLed():
     def release(self):   
         self.cap.release()
         
-    def set_rectangle(self, top: int, bot: int, left: int, right: int, thickness: int):
-        if top >= 0 and top < self.clip_height - self.rect_bot:
-            self.rect_top = top
-        if bot >= 0 and self.clip_height - bot > self.rect_top:
-            self.rect_bot = bot
-        if right >= 0 and self.clip_width - right > self.rect_left:
-            self.rect_right = right
-        if left >= 0 and - left < self.clip_width - self.rect_right:
-            self.rect_left = left
-        self.rect_thickness = thickness
-        
-        
+    def set_rectangle(self, bot: int, top: int, left: int, right: int, thickness: int):
+        if top < self.clip_height - self.rect_bot:
+            self.rect_top = top + int(self.rect_thickness/2)
+        if self.clip_height + bot > self.rect_top:
+            self.rect_bot = bot + int(self.rect_thickness/2)
+        if self.clip_width - right > self.rect_left:
+            self.rect_right = right + int(self.rect_thickness/2)
+        if left < self.clip_width - self.rect_right:
+            self.rect_left = left + int(self.rect_thickness/2)
+        if thickness and thickness > 2:
+            self.rect_thickness = thickness
+ 
     def set_start_end_sec(self, start_sec: int, end_sec: int):
         if end_sec and end_sec > start_sec:
             self.clip_end_frame = self.fps*end_sec
@@ -202,59 +214,127 @@ class VideoToLed():
         # Capture frame-by-frame
         self.is_playing = True
         while True:
-            time.sleep(1/self.fps)
-            self.frame_counter += 1
-            ret, frame = self.cap.read()
-            
-            if ret == True:
-                # frame = frame[self.crop_bot:self.clip_height - self.crop_top , 
-                #           self.crop_left:self.clip_width - self.crop_right] # TODO ???
-                
-                rect_start_point = (self.rect_left, self.rect_bot)
-                rect_end_point = (self.clip_width - self.rect_right, self.clip_height - self.rect_top)
-                rect_thickness = self.rect_thickness
-                color = (255, 0, 0)
-                
-                overlay = frame.copy()
-                alpha = 0.4
-
-                overlay = cv2.rectangle(overlay, rect_start_point, rect_end_point, color, rect_thickness)
-                frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
-                
+            if self.pause_flag == False:
                 if self.stop_flag:
-                    self.release()
-                    break
+                        self.release()
+                        break
                 if self.frame_counter == self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.frame_counter == self.clip_end_frame or self.restart_flag:
                     self.frame_counter = self.clip_start_frame #Or whatever as long as it is the same as next line
                     self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     self.restart_flag = False
-                # transform to jpeg
-                ret, buffer = cv2.imencode('.jpg', frame)
-                frame = buffer.tobytes()
+                        
+                time.sleep(1/self.fps)
+                self.frame_counter += 1
+                ret, video_frame = self.cap.read()
                 
-                yield  (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
-            else: 
-                return None
+                if ret == True:
+                    
+                    # create led arrays and frame
+                    led_arrays = self.generate_led_arrays(video_frame)
+                    led_frame = self.generate_led_image(led_arrays)
+
+                    # create rectangle
+                    rect_start_point = (self.rect_left, self.rect_top)
+                    rect_end_point = (self.clip_width - self.rect_right, self.clip_height - self.rect_bot)
+                    rect_thickness = self.rect_thickness
+                    color = (255, 0, 0)
+                    overlay = video_frame.copy()
+                    alpha = 0.4
+                    overlay = cv2.rectangle(overlay, rect_start_point, rect_end_point, color, rect_thickness)
+                    video_frame = cv2.addWeighted(overlay, alpha, video_frame, 1 - alpha, 0)
+                    
+                    # stacking both frames
+                    frame = np.vstack((video_frame, led_frame))
+                    
+                    # transform to jpeg
+                    ret, buffer = cv2.imencode('.jpg', frame)
+                    frame = buffer.tobytes()
+                    
+                    yield  (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
+                else: 
+                    return None
             
     def generate_led_arrays(self, frame):
-
+        rt = self.rect_thickness
+        
+        if self.rect_bot - rt/2 >= 0:
+            frame_crop_bot = int(self.rect_bot + rt/2)
+        else:
+            frame_crop_bot = 0
+            
+        if self.clip_height - self.rect_top + rt/2 <= self.clip_height:
+            frame_crop_top = int(self.clip_height - self.rect_top + rt/2)
+        else:
+            frame_crop_top = self.clip_height
+            
+        if self.rect_left - rt/2 >= 0:
+            frame_crop_left = int(self.rect_left - rt/2)
+        else:
+            frame_crop_left = 0
+            
+        if self.clip_width - self.rect_right + rt/2 <= self.clip_width:
+            frame_crop_right = int(self.clip_width - self.rect_right + rt/2)
+        else:
+            frame_crop_right = self.clip_width
+        
+        frame = frame[int(self.clip_height - frame_crop_top-rt/2) : int(self.clip_height - frame_crop_bot+rt/2), 
+                          int(frame_crop_left+rt/2) : int(frame_crop_right-rt/2)]
+        
+        # line_top = np.sum(frame[frame_crop_top-rt:frame_crop_top+rt,:], axis = 0)/rt
+        # line_bot = np.sum(frame[frame_crop_bot-rt:frame_crop_bot+rt,:], axis = 0)/rt
+        # line_left = np.sum(frame[:,frame_crop_left-rt:frame_crop_left+rt], axis = 1)/rt
+        # line_right = np.sum(frame[:,frame_crop_right-rt:frame_crop_right+rt], axis = 1) /rt
+        
         resized_hor = np.array(cv2.resize(frame, 
-                                          dsize=(led_hor, self.clip_height/self.rect_thickness), 
+                                          dsize=(self.led_hor, int(self.clip_height/self.rect_thickness)), 
                                           interpolation=cv2.INTER_CUBIC))
         resized_ver = np.array(cv2.resize(frame, 
-                                          dsize=(self.clip_width/self.rect_thickness, led_ver), 
+                                          dsize=(int(self.clip_width/self.rect_thickness), self.led_ver), 
                                           interpolation=cv2.INTER_CUBIC))
-        
-        if mirrow == True:
-            frame = cv2.flip(frame, 1)
 
-        # resized = np.array(cv2.resize(frame, dsize=(led_hor, led_ver), interpolation=cv2.INTER_CUBIC))
-        line_up = resized_hor[0, :]
-        line_down = resized_hor[led_ver - 1, :]
+        cv2.namedWindow('hor')
+        cv2.imshow( 'hor', resized_hor)
+        cv2.namedWindow('ver')
+        cv2.imshow( "ver", resized_ver)
+        cv2.namedWindow('Frame')
+        cv2.imshow( "Frame", frame)
+        
+        
+        # cv2.startWindowThread()
+        # cv2.namedWindow("preview")
+        # cv2.imshow("preview", frame)
+        if cv2.waitKey(25) & 0xFF == ord('q'):
+            pass
+        # if mirrow == True:
+        #     frame = cv2.flip(frame, 1) 
+
+
+        line_top = resized_hor[-1, :]
+        line_bot = resized_hor[0, :]
+       
         line_left = resized_ver[:, 0]
-        line_right = resized_ver[:, led_hor - 1]
-        return [line_up, line_down, line_left, line_right]
+        line_right = resized_ver[:, -1]
+        
+        return [line_top, line_bot, line_left, line_right]
+     
+    def generate_led_image(self, led_arrays: []):
+        size_horizontal = led_arrays[0].shape[0]
+        size_vertical = led_arrays[2].shape[0]
+        img = np.zeros([size_vertical,size_horizontal,3],dtype=np.uint8)
+        img.fill(5) # or img[:] = 255
+        
+        # adding light effect to shine into the center of the image
+        for i in range (5):
+            img[-1-i, :] =  led_arrays[0]/i
+            img[i, :] = led_arrays[1]/i
+            img[:, i] = np.flip(led_arrays[3]/i)
+            img[:, -1-i] = np.flip(led_arrays[2]/i) 
+        
+        img = cv2.resize(img, dsize=(self.clip_width, self.clip_height), interpolation=cv2.INTER_CUBIC)
+        return img
+            
+        
         
 
 
