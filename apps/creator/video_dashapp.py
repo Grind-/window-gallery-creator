@@ -1,32 +1,16 @@
 from flask import Flask, send_from_directory, Response
 from dash import dcc
 from dash import html
-from dash.exceptions import PreventUpdate
-from dash_uploader.configure_upload import decorate_server as du_service
-
 import dash_bootstrap_components as dbc
 import dash_uploader as du
 from dash_extensions.enrich import Dash, ServersideOutput, Output, Input, State, Trigger
 
-import asyncio
-import base64
-import cv2
-import threading
 import os.path
 from dash.dependencies import Output, Input
-from quart import Quart, websocket
-from dash_extensions import WebSocket
 
-import numpy as np
 from pathlib import Path
-import uuid
-import io
-from base64 import b64encode
-from PIL import Image
 
 import moviepy.editor as mpy
-from quart import Quart, websocket
-import pafy
 from apps.creator.functions import VideoToLed
 
 APP_ID = 'windwow_gallery_creator'

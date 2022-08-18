@@ -9,15 +9,10 @@ import platform
 import string
 import sys
 import time
-
-from PIL import Image, ImageEnhance
 import cv2
 import pafy
-import requests
 
 import numpy as np
-import os
-import re
 from threading import Thread, Event
 from apps.util.youtube_downloader import YoutubeDownloader
 from scipy.ndimage import interpolation
