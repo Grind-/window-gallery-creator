@@ -139,10 +139,7 @@ def add_video_editing_dashboard(dash_app):
 
     @dash_app.callback(
         [
-            # Output(f'{APP_ID}_process_video_button', 'disabled'),
-            Output(f'{APP_ID}_t_start_input', 'value'),
-            Output(f'{APP_ID}_t_end_input', 'value'),
-            Output(f'{APP_ID}_thickness_input', 'value')
+            Output(f'{APP_ID}_status', 'data')
         ],
         [
             Input(f'{APP_ID}_large_upload_fn_store', 'data'),
@@ -154,7 +151,7 @@ def add_video_editing_dashboard(dash_app):
 
         clip = mpy.VideoFileClip(dic_of_names[list(dic_of_names)[0]])
 
-        return False, 0., clip.duration, clip.size[0]
+        return ''
     
     
     @dash_app.callback(Output(f'{APP_ID}_udate_video', 'children'),
