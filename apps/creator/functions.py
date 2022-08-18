@@ -342,10 +342,10 @@ class VideoToLed():
         
         # adding light effect to shine into the center of the image
         for i in range (2):
-            img[-1-i, :] =  led_arrays[0]/i
-            img[i, :] = led_arrays[1]/i
-            img[:, -1-i] = led_arrays[3]/i
-            img[:, i] = led_arrays[2]/i
+            img[-1-i, :] =  led_arrays[0]/(i+1)
+            img[i, :] = led_arrays[1]/(i+1)
+            img[:, -1-i] = led_arrays[3]/(i+1)
+            img[:, i] = led_arrays[2]/(i+1)
         
         img = cv2.resize(img[1:size_vertical-1, 1:size_horizontal-1], 
                          dsize=(self.clip_width, self.clip_height), interpolation=cv2.INTER_CUBIC)
