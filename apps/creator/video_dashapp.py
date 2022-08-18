@@ -184,6 +184,7 @@ def add_video_editing_dashboard(dash_app):
                 State(f'{APP_ID}_youtube_url', 'value')
                 )
     def load_youtube_video(nclicks:int, url: str):
+        status = ''
         if url:
             video_to_led.pause()
             status = video_to_led.open_youtube_video(url=url)
