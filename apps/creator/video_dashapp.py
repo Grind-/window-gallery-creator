@@ -1,5 +1,5 @@
 from flask import Flask, send_from_directory, Response
-from dash import dcc
+from dash import dcc, ctx
 from dash import html
 import dash_bootstrap_components as dbc
 import dash_uploader as du
@@ -189,6 +189,19 @@ def add_video_editing_dashboard(dash_app):
             status = video_to_led.open_youtube_video(url=url)
             video_to_led.play()
         return status
+    
+    @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
+                Input(f'{APP_ID}_record_button', 'n_clicks'),
+                Input(f'{APP_ID}_stop_record_button', 'n_clicks'),
+                Input(f'{APP_ID}_play_button', 'n_clicks'),
+                )
+    def recorder(record: int, stop_rec: int, play: int):
+        if f'{APP_ID}_record_button' == ctx.triggered_id:
+            video_to_led.record()
+        if f'{APP_ID}_stop_record_button' == ctx.triggered_id:
+            video_to_led.stop_record()
+        if f'{APP_ID}_play_button' == ctx.triggered_id:
+            video_to_led.play()
     
         
     @dash_app.server.route(f'{URL_BASE}video_feed/<value>')

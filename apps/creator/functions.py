@@ -122,7 +122,7 @@ def capture_from_youtube(capture_time):
 
 class VideoToLed():
     def __init__(self):
-        self.led_array = []
+        self.led_array =np.array([])
         self.is_playing = False
         self.restart_flag = False
         self.stop_flag = False
@@ -183,6 +183,7 @@ class VideoToLed():
         
     def stop_record(self):
         self.pause()
+        print('recorded ' + str(self.led_array.len())+ ' frames')
         self.record_flag = False
         
     def pause(self):
@@ -326,7 +327,7 @@ class VideoToLed():
         line_right = resized_ver[:, -1]
         
         if self.record_flag == True:
-            self.led_array.append(np.stack([np.flip(line_bot), 
+            self.led_array.append(np.vstack([np.flip(line_bot), 
                                            np.flip(line_left), 
                                            line_top,   
                                            line_right]))
