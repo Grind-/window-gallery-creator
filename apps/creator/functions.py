@@ -13,7 +13,6 @@ import cv2
 import pafy
 
 import numpy as np
-from threading import Thread, Event
 from apps.util.youtube_downloader import YoutubeDownloader
 from scipy.ndimage import interpolation
 import os.path
@@ -34,8 +33,6 @@ live = False
 resolution = (320, 240)
 download_destination = 'apps/static/assets/.temp'
 
-stop_play_event = Event()
-reset_play_event = Event()
 
 frame_out = b''
 

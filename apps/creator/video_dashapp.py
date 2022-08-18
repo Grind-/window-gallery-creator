@@ -20,7 +20,6 @@ from distutils.dir_util import copy_tree
 APP_ID = 'windwow_gallery_creator'
 URL_BASE = '/dashapp/'
 MIN_HEIGHT = 600
-n_streams=1
 led_hor = 30
 led_ver = 30
 
