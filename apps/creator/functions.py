@@ -221,7 +221,8 @@ class VideoToLed():
     def set_start_end_sec(self, start_sec: int, end_sec: int):
         if end_sec and end_sec > start_sec:
             self.clip_end_frame = self.fps*end_sec
-        self.clip_start_frame = self.fps*start_sec
+        if start_sec and start_sec < end_sec:
+            self.clip_start_frame = self.fps*start_sec
         from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
         ffmpeg_extract_subclip(download_destination+'/'+self.video_name, self.clip_start_frame/self.fps, 
                                self.clip_end_frame/self.fps, targetname=download_destination+'/cut'+self.video_name)
