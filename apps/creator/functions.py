@@ -215,7 +215,7 @@ class VideoToLed():
  
     def set_start_end_sec(self, start_sec: int, end_sec: int):
         if end_sec and end_sec > start_sec:
-            self.clip_end_frame = self.fps*end_sec
+            self.clip_end_frame = int(self.fps*end_sec)-1
         if start_sec and start_sec < end_sec:
             self.clip_start_frame = self.fps*start_sec
         from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
@@ -229,12 +229,14 @@ class VideoToLed():
     def start(self):
         # Capture frame-by-frame
         self.is_playing = True
+        print(self.clip_end_frame)
         while True:
             if self.pause_flag == False:
+                print(self.frame_counter)
                 if self.stop_flag:
                         self.release()
                         break
-                if self.frame_counter == self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.frame_counter == self.clip_end_frame-1 or self.restart_flag:
+                if self.frame_counter >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.frame_counter >= self.clip_end_frame-1 or self.restart_flag:
                     self.frame_counter = self.clip_start_frame #Or whatever as long as it is the same as next line
                     self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     self.restart_flag = False
