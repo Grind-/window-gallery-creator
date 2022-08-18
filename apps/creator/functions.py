@@ -121,7 +121,6 @@ class VideoToLed():
         print('start')
         # Capture frame-by-frame
         self.is_playing = True
-        self.open_video_from_file(path=os.path.join('apps', 'static', 'assets', 'videos'), filename="color stripes.mp4")
         while True:
             if self.pause_flag == False:
                 if self.stop_flag:
