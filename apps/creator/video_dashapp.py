@@ -13,12 +13,22 @@ from pathlib import Path
 import moviepy.editor as mpy
 from apps.creator.functions import VideoToLed
 
+from distutils.dir_util import copy_tree
+
+
+
 APP_ID = 'windwow_gallery_creator'
 URL_BASE = '/dashapp/'
 MIN_HEIGHT = 600
 n_streams=1
 led_hor = 30
 led_ver = 30
+
+# copy subdirectory example
+from_directory = "apps/static/assets/videos"
+to_directory = "apps/static/assets/.temp"
+copy_tree(from_directory, to_directory)
+
 video_to_led = VideoToLed()
 video_to_led.open_video_from_file(path=os.path.join('apps', 'static', 'assets', 'videos'), filename="color stripes.mp4")
 # (url='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler')
@@ -65,11 +75,11 @@ def get_layout():
                     dcc.Slider(0, video_to_led.clip_height, 1, 
                                id=f'{APP_ID}_rect_top_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False},
-                                value=4,),
+                                value=video_to_led.clip_height-4,),
                 ]), 
             dbc.FormGroup([
                     dbc.Label('Rect Left (px)'),
-                    dcc.Slider(0, video_to_led.clip_width - video_to_led.rect_right, 1, 
+                    dcc.Slider(0, video_to_led.clip_width, 1, 
                                id=f'{APP_ID}_rect_left_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False},
                                 value=4,),
@@ -79,7 +89,7 @@ def get_layout():
                     dcc.Slider(0, video_to_led.clip_width, 1,
                                 id=f'{APP_ID}_rect_right_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False},
-                                value=4),
+                                value=video_to_led.clip_width-4),
                 ]),
             dbc.FormGroup([
                     dbc.Label('Clip Start (sec)'),
@@ -105,10 +115,11 @@ def get_layout():
         ]),
         dbc.ButtonGroup([
             dbc.Button('Record', id=f'{APP_ID}_record_button', color='primary', disabled=False),
+            dcc.Input(id=f'{APP_ID}_frame_id', type='url', 
+                          placeholder='frame id here',
+                          debounce=True, style={"width": "300px"}),
             html.A(
-                dbc.Button('Download Sequence', id=f'{APP_ID}_download_button', color='primary', disabled=False),
-                id=f'{APP_ID}_download_link',
-                href=''
+                dbc.Button('Send Sequence', id=f'{APP_ID}_send_sequence', color='primary', disabled=False),
             )
         ]),
     ])
@@ -157,6 +168,8 @@ def add_video_editing_dashboard(dash_app):
                 Input(f'{APP_ID}_rect_right_input', 'value'),
             ])
     def update_video(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right):
+        rect_top = video_to_led.clip_height - rect_top
+        rect_right = video_to_led.clip_width - rect_right
         video_to_led.pause()
         video_to_led.set_start_end_sec(clip_start, clip_end)
         video_to_led.set_rectangle(rect_bot, rect_top, rect_left, rect_right, thickness)

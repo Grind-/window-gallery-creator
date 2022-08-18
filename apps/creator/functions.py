@@ -32,7 +32,7 @@ capture_time = 20  # length of video in seconds
 camera = 0
 live = False
 resolution = (320, 240)
-download_destination = 'video_temp'
+download_destination = 'apps/static/assets/.temp'
 
 stop_play_event = Event()
 reset_play_event = Event()
@@ -229,10 +229,8 @@ class VideoToLed():
     def start(self):
         # Capture frame-by-frame
         self.is_playing = True
-        print(self.clip_end_frame)
         while True:
             if self.pause_flag == False:
-                print(self.frame_counter)
                 if self.stop_flag:
                         self.release()
                         break
@@ -349,74 +347,3 @@ class VideoToLed():
         img = cv2.resize(img[1:size_vertical-1, 1:size_horizontal-1], 
                          dsize=(self.clip_width, self.clip_height), interpolation=cv2.INTER_CUBIC)
         return img
-            
-        
-        
-
-
-        
-class VideoToLedBckup():
-    def __init__(self):
-        self.is_playing = False
-        self.restart_flag = False
-        self.stop_flag = False
-        self.frame_counter = 0
-        self.clip_start_frame = 0
-        self.clip_end_frame = 100000
-        self.clip_duration = 0
-        self.cap = cv2.VideoCapture()
-    
-    def open_youtube_video(self, url: str):
-        self.release()
-        video = pafy.new(url)
-        best  = video.getbest(preftype="mp4")
-        all_streams = video.allstreams  
-        mp4_list = [] 
-        for stream in all_streams:
-            if stream.extension=="mp4" and stream.mediatype=="normal":
-                mp4_list.append(stream)
-        lowest = getlowest(videostreams=mp4_list, preftype="mp4")
-        self.clip_duration = video.length       
-        #documentation: https://pypi.org/project/pafy/
-        
-        self.cap = cv2.VideoCapture(lowest.url)
-        if (self.cap.isOpened()== False): 
-            print("Error opening video stream or file")
-        
-    def stop(self):
-        self.stop_flag = True
-        self.is_playing = False
-        self.cap.release()
-        
-    def restart(self):
-        self.restart_flag = True
-     
-    def release(self):   
-        self.cap.release()
-        
-    def set_start_sec(self, sec: int):
-        frame_duration = self.clip_duration / self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
-        self.clip_start_frame = sec/frame_duration
-    
-    def generate_video_frames(self):
-        # Capture frame-by-frame
-        self.is_playing = True
-        while True:
-            self.frame_counter += 1
-            ret, frame = self.cap.read()
-            if ret == True:
-                if self.stop_flag:
-                    self.release()
-                    break
-                if self.frame_counter == self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.frame_counter == self.clip_end_frame or self.restart_flag:
-                    self.frame_counter = self.clip_start_frame #Or whatever as long as it is the same as next line
-                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    self.restart_flag = False
-                # transform to jpeg
-                ret, buffer = cv2.imencode('.jpg', frame)
-                frame = buffer.tobytes()
-                
-                yield  (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
-            else: 
-                return None
