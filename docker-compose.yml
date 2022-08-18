@@ -19,7 +19,7 @@ services:
     networks:
       - web_network
     depends_on: 
-      - viridis-signing
+      - window-gallery-creator
 networks:
   db_network:
     driver: bridge
