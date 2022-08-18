@@ -21,3 +21,4 @@ dash
 dash_uploader
 dash_extensions
 pandas
+dash_bootstrap_components

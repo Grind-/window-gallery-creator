@@ -234,7 +234,7 @@ class VideoToLed():
                 if self.stop_flag:
                         self.release()
                         break
-                if self.frame_counter == self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.frame_counter == self.clip_end_frame or self.restart_flag:
+                if self.frame_counter == self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.frame_counter == self.clip_end_frame-1 or self.restart_flag:
                     self.frame_counter = self.clip_start_frame #Or whatever as long as it is the same as next line
                     self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     self.restart_flag = False
@@ -305,19 +305,14 @@ class VideoToLed():
                                           dsize=(int(self.clip_width/self.rect_thickness), self.led_ver), 
                                           interpolation=cv2.INTER_CUBIC))
 
-        cv2.namedWindow('hor')
-        cv2.imshow( 'hor', resized_hor)
-        cv2.namedWindow('ver')
-        cv2.imshow( "ver", resized_ver)
-        cv2.namedWindow('Frame')
-        cv2.imshow( "Frame", frame)
-        
-        
-        # cv2.startWindowThread()
-        # cv2.namedWindow("preview")
-        # cv2.imshow("preview", frame)
-        if cv2.waitKey(25) & 0xFF == ord('q'):
-            pass
+        # cv2.namedWindow('hor')
+        # cv2.imshow( 'hor', resized_hor)
+        # cv2.namedWindow('ver')
+        # cv2.imshow( "ver", resized_ver)
+        # cv2.namedWindow('Frame')
+        # cv2.imshow( "Frame", frame)
+        # if cv2.waitKey(25) & 0xFF == ord('q'):
+        #     pass
         # if mirrow == True:
         #     frame = cv2.flip(frame, 1) 
 
