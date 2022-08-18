@@ -6,11 +6,6 @@ COPY . .
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# install system dependencies
-# RUN apt-get update --allow-releaseinfo-change
-# RUN apt-get install ffmpeg libsm6 libxext6  -y
-# RUN apt-get update && apt-get install libgl1
-
 # install python dependencies
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
