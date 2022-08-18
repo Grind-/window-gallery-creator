@@ -12,7 +12,7 @@ from pathlib import Path
 
 import moviepy.editor as mpy
 from apps.creator.functions import VideoToLed
-
+import base64
 from distutils.dir_util import copy_tree
 
 
@@ -30,8 +30,7 @@ copy_tree(from_directory, to_directory)
 
 video_to_led = VideoToLed()
 video_to_led.open_video_from_file(path=os.path.join('apps', 'static', 'assets', 'videos'), filename="color stripes.mp4")
-# (url='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler')
-
+youtube_url='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler' 
         
 def get_layout():
     layout = dbc.Container([
@@ -44,7 +43,7 @@ def get_layout():
                           debounce=True, style={"width": "300px"}),
                 dbc.Button('load', id=f'{APP_ID}_youtube_load_button', color='primary', 
                            disabled=False, n_clicks=0),], style={"margin":"20px 0px"}),
-        dbc.Row([html.P(id=f'{APP_ID}_status'),]),
+        dbc.Row([html.P(id=f'{APP_ID}_video_filename'),]),
         dbc.Label('or drag and drop a video file here'),
         dcc.Store(id=f'{APP_ID}_large_upload_fn_store'),
         du.Upload(id=f'{APP_ID}_large_upload', max_file_size=5120),
@@ -113,9 +112,9 @@ def get_layout():
             ]),
         ]),
         dbc.ButtonGroup([
-            dbc.Button('Record', id=f'{APP_ID}_record_button', color='primary', disabled=False),
-            dbc.Button('Stop Record', id=f'{APP_ID}_stop_record_button', color='primary', disabled=False),
-            dbc.Button('Play', id=f'{APP_ID}_play_button', color='primary', disabled=False),
+            # dbc.Button('Record', id=f'{APP_ID}_record_button', color='primary', disabled=False),
+            # dbc.Button('Stop Record', id=f'{APP_ID}_stop_record_button', color='primary', disabled=False),
+            # dbc.Button('Play', id=f'{APP_ID}_play_button', color='primary', disabled=False),
             dcc.Input(id=f'{APP_ID}_frame_id', type='url', 
                           placeholder='frame id here',
                           debounce=True, style={"width": "300px"}),
@@ -164,49 +163,55 @@ def add_video_editing_dashboard(dash_app):
                 Input(f'{APP_ID}_rect_top_input', 'value'),
                 Input(f'{APP_ID}_rect_left_input', 'value'),
                 Input(f'{APP_ID}_rect_right_input', 'value'),
+                Input(f'{APP_ID}_video_filename', 'value')
             ])
-    def update_video(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right):
+    def update_video(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right, video_filename):
         rect_top = video_to_led.clip_height - rect_top
         rect_right = video_to_led.clip_width - rect_right
-        video_to_led.pause()
-        video_to_led.set_start_end_sec(clip_start, clip_end)
-        video_to_led.set_rectangle(rect_bot, rect_top, rect_left, rect_right, thickness)
-        video_to_led.play()
-        return html.Img(src=f'{URL_BASE}video_feed/{thickness}', style={'width': '500px'})
+        
+        path = os.path.join('apps', 'static', 'assets', '.temp')
+        filename = "color stripes.mp4"
+        if video_filename:
+            filename = video_filename
+        filename_bytes = filename.encode("ascii")
+        path_bytes = path.encode("ascii")
+        path_base64_bytes = base64.b64encode(path_bytes)
+        path_base64_string = path_base64_bytes.decode("ascii")
+        filename_base64_bytes = base64.b64encode(filename_bytes)
+        filename_base64_string = filename_base64_bytes.decode("ascii")
+        video_feed_url = f'{URL_BASE}video_feed/{path_base64_string}/{filename_base64_string}/{rect_bot}/{rect_top}/{rect_left}/{rect_right}/{clip_start}/{clip_end}/{thickness}'
+        video_path=os.path.join(path, filename)
+        if os.path.exists(os.path.join(path, filename)):
+            return html.Img(src=video_feed_url, style={'width': '500px'})
     
     
     
-    @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
+    @dash_app.callback(Output(f'{APP_ID}_video_filename', 'value'),
                 Input(f'{APP_ID}_youtube_load_button', 'n_clicks'),
                 State(f'{APP_ID}_youtube_url', 'value')
                 )
     def load_youtube_video(nclicks:int, url: str):
-        status = ''
+        payload = ''
         if url:
-            video_to_led.pause()
-            status = video_to_led.open_youtube_video(url=url)
-            video_to_led.play()
-        return status
-    
-    @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
-                Input(f'{APP_ID}_record_button', 'n_clicks'),
-                Input(f'{APP_ID}_stop_record_button', 'n_clicks'),
-                Input(f'{APP_ID}_play_button', 'n_clicks'),
-                )
-    def recorder(record: int, stop_rec: int, play: int):
-        if f'{APP_ID}_record_button' == ctx.triggered_id:
-            video_to_led.record()
-        if f'{APP_ID}_stop_record_button' == ctx.triggered_id:
-            video_to_led.stop_record()
-        if f'{APP_ID}_play_button' == ctx.triggered_id:
-            video_to_led.play()
+            payload = video_to_led.load_youtube_video(url=url)
+        return payload
     
         
-    @dash_app.server.route(f'{URL_BASE}video_feed/<value>')
-    def video_feed(value):
-        if video_to_led.is_playing:
-            video_to_led.restart()
-        return Response(video_to_led.start(),
+    @dash_app.server.route(f'{URL_BASE}video_feed/<string:path_encoded>/<string:filename_encoded>/<rect_bot>/<rect_top>/<rect_left>/<rect_right>/<t_start>/<t_end>/<thickness>')
+    def video_feed(path_encoded, filename_encoded, rect_bot, rect_top, rect_left, rect_right, t_start, t_end, thickness):
+        path_base64_bytes = path_encoded.encode("ascii")
+        path_base64_bytes = base64.b64decode(path_base64_bytes)
+        path_decoded = path_base64_bytes.decode("ascii")
+        filename_base64_bytes = filename_encoded.encode("ascii")
+        filename_base64_bytes = base64.b64decode(filename_base64_bytes)
+        filename_decoded = filename_base64_bytes.decode("ascii")
+        video_to_led_feed = VideoToLed()
+        video_to_led_feed.open_video_from_file(path_decoded, filename_decoded)
+        video_to_led_feed.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
+        video_to_led_feed.set_start_end_sec(int(t_start), int(float(t_end)))
+        if video_to_led_feed.is_playing:
+            video_to_led_feed.restart()
+        return Response(video_to_led_feed.start(),
                         mimetype='multipart/x-mixed-replace; boundary=frame')
         
         

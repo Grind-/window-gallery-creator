@@ -17,112 +17,11 @@ from apps.util.youtube_downloader import YoutubeDownloader
 from scipy.ndimage import interpolation
 import os.path
 
-# Constants for LED strip and image processing
-pixel_pin = 13
-# pixel_pin = board.D18
-num_pixels = 64
-led_hor = 16  # horizontal number of LEDs
-led_ver = 16  # vertical number of LEDs
-reduce_color_bit = 17  # decrease color bits factor
-contrast_factor = 10  # increase contrast
-mirrow = False
-frame_rate = 30
-capture_time = 20  # length of video in seconds
-camera = 0
-live = False
-resolution = (320, 240)
 download_destination = 'apps/static/assets/.temp'
-
-
-frame_out = b''
-
-def capture_from_youtube(capture_time):
-
-    video = pafy.new(url)
-    best  = video.getbest(preftype="mp4")
-    #documentation: https://pypi.org/project/pafy/
-
-    cap = cv2.VideoCapture(best.url)
-    check, frame = cap.read()
-    frame_rate = cap.get(cv2.CAP_PROP_FPS)
-    print ('check, frame, frame_rate: ', check, frame, frame_rate)
-
-
-    if cap is None or not cap.isOpened():
-        print('Warning: unable to open video source: ', url)
-
-    # (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
-    # if int(major_ver) < 3:
-    #     fps = cap.get(cv2.cv.CV_CAP_PROP_FPS)
-    #     print("Frames per second using video.get(cv2.cv.CV_CAP_PROP_FPS): {0}".format(fps))
-    # else:
-    #     fps = cap.get(cv2.CAP_PROP_FPS)
-    #     print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
-
-    frameCount = int(frame_rate * capture_time)
-    print(f'frame count is {frameCount}')
-
-    # enhancer = ImageEnhance.Contrast(image)
-    # image = enhancer.enhance(contrast_factor)
-    # array = np.array(image)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
-
-    frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-    print(f'camera resolution is: {frameWidth} x {frameHeight}')
-
-    led_array = []
-    fc = 0
-    ret = True
-
-    # cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-    # cv2.resizeWindow('image', 600, 600)
-    while (fc < frameCount and ret):
-
-        ret, frame = cap.read()
-        if mirrow == True:
-            frame = cv2.flip(frame, 1)
-        if frame is None:
-            print('no frame captured, aborting')
-            break
-        resized = np.array(cv2.resize(frame, dsize=(led_hor, led_ver), interpolation=cv2.INTER_CUBIC))
-        # im_1_22 = 255.0 * (resized / 255.0)**(1 / 2.2)
-        # im_22 = 255.0 * (resized / 255.0)**2.2
-        # resized = np.concatenate((im_1_22, resized, im_22), axis=1)
-
-        # image_yuv = cv2.cvtColor(resized, cv2.COLOR_BGR2YUV)
-        # image_yuv[:, :, 0] = cv2.equalizeHist(image_yuv[:, :, 0])
-        # resized = cv2.cvtColor(image_yuv, cv2.COLOR_YUV2RGB)
-
-        resized = apply_brightness_contrast(resized, 0, 64)
-        line_up = resized[0, :]
-        line_down = resized[led_ver - 1, :]
-        line_left = resized[:, 0]
-        line_right = resized[:, led_hor - 1]
-
-        # cv2.imshow('original', frame)
-        # cv2.imshow('image', white_image)
-
-        actual_led_array = np.concatenate((line_right[::-1], line_up[::-1], line_left[::1], line_down[::1]))
-        led_array.append(actual_led_array)
-
-        if live:
-            for i in range(0, num_pixels - 1):
-                pixels[i] = actual_led_array[i].astype(int)
-            pixels.show()
-        fc += 1
-        print (fc)
-
-    cap.release()
-    cv2.destroyAllWindows()
-
-    return np.array(led_array)
 
 class VideoToLed():
     def __init__(self):
-        self.led_array =np.array([])
+        self.led_array = np.array([])
         self.is_playing = False
         self.restart_flag = False
         self.stop_flag = False
@@ -159,7 +58,7 @@ class VideoToLed():
         if (self.cap.isOpened()== False): 
             print("Error opening video stream or file")
             
-    def open_youtube_video(self, url: str):
+    def load_youtube_video(self, url: str):
         video = pafy.new(url)
         video_length = video.length
         if video_length > 300:
@@ -167,24 +66,13 @@ class VideoToLed():
         downloader = YoutubeDownloader()
         downloader.choose_destination(download_destination)
         self.video_name = downloader.download_video(url, 'low')
-        self.release()
-        self.cap = cv2.VideoCapture(download_destination+'/'+self.video_name)
-        self.open_video()
+        return self.video_name
         
     def open_video_from_file(self, path, filename):
         filepath = os.path.join(path, filename)
         self.cap = cv2.VideoCapture(filepath)
         self.video_name = filename
         self.open_video()
-        
-    def record(self):
-        self.led_array = []
-        self.record_flag = True
-        
-    def stop_record(self):
-        self.pause()
-        print('recorded ' + str(len(self.led_array))+ ' frames')
-        self.record_flag = False
         
     def pause(self):
         self.pause_flag = True
@@ -230,8 +118,10 @@ class VideoToLed():
         self.clip_duration = self.frame_count/self.fps
     
     def start(self):
+        print('start')
         # Capture frame-by-frame
         self.is_playing = True
+        self.open_video_from_file(path=os.path.join('apps', 'static', 'assets', 'videos'), filename="color stripes.mp4")
         while True:
             if self.pause_flag == False:
                 if self.stop_flag:
@@ -275,6 +165,7 @@ class VideoToLed():
                     return None
             
     def generate_led_arrays(self, frame):
+        # print('generate_led_arrays')
         rt = self.rect_thickness
         
         if self.rect_bot - rt/2 >= 0:
@@ -335,6 +226,7 @@ class VideoToLed():
         return [line_top, line_bot, line_left, line_right]
      
     def generate_led_image(self, led_arrays: []):
+        # print('generate_led_image')
         size_horizontal = led_arrays[0].shape[0]
         size_vertical = led_arrays[2].shape[0]
         img = np.zeros([size_vertical,size_horizontal,3],dtype=np.uint8)
