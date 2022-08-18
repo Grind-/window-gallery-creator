@@ -26,17 +26,15 @@ video_to_led.open_video_from_file(path=os.path.join('apps', 'static', 'assets', 
         
 def get_layout():
     layout = dbc.Container([
-        
-        dbc.FormGroup([
-            dbc.Row([
-                dbc.Label('Paste a Youtube Link here and press load (max 5 min):  '),
-                dcc.Input(id=f'{APP_ID}_youtube_url', type='url', 
+
+        dbc.Row([
+            dbc.Label('Paste a Youtube Link here and press load (max 5 min):  ',),
+            ], style={"margin-top":"50px", "margin":"20px 0px"}),
+        dbc.Row([dcc.Input(id=f'{APP_ID}_youtube_url', type='url', 
                           placeholder='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler',
-                          debounce=True),
+                          debounce=True, style={"width": "300px"}),
                 dbc.Button('load', id=f'{APP_ID}_youtube_load_button', color='primary', 
-                           disabled=False, n_clicks=0),
-                ]),
-        ]),
+                           disabled=False, n_clicks=0),], style={"margin":"20px 0px"}),
         dbc.Row([html.P(id=f'{APP_ID}_status'),]),
         dbc.Label('or drag and drop a video file here'),
         dcc.Store(id=f'{APP_ID}_large_upload_fn_store'),
@@ -85,14 +83,14 @@ def get_layout():
                 ]),
             dbc.FormGroup([
                     dbc.Label('Clip Start (sec)'),
-                    dcc.Slider(0, video_to_led.clip_width, 1, 
+                    dcc.Slider(0, video_to_led.clip_duration, 1, 
                                id=f'{APP_ID}_t_start_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False},
                                 value=0,),
                 ]),
             dbc.FormGroup([
                     dbc.Label('Clip End (sec)'),
-                    dcc.Slider(0, video_to_led.clip_duration, 1, 
+                    dcc.Slider(1, video_to_led.clip_duration, 1, 
                                id=f'{APP_ID}_t_end_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False}, 
                                 value=video_to_led.clip_duration),
