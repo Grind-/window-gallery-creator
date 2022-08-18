@@ -183,7 +183,7 @@ class VideoToLed():
         
     def stop_record(self):
         self.pause()
-        print('recorded ' + str(self.led_array.len())+ ' frames')
+        print('recorded ' + str(len(self.led_array))+ ' frames')
         self.record_flag = False
         
     def pause(self):
