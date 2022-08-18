@@ -47,7 +47,7 @@ class ProductionConfig(Config):
         os.getenv('DB_PASS', 'root'),
         os.getenv('DB_HOST', 'localhost'),
         os.getenv('DB_PORT', 3306),
-        os.getenv('DB_NAME', 'viridis')
+        os.getenv('DB_NAME', 'windowgallery')
     )
 
 
