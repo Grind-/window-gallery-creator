@@ -19,5 +19,5 @@ youtube-dl==2020.12.2
 moviepy
 dash
 dash_uploader
-dash_extentsions
+dash_extensions
 pandas
