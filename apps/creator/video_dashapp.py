@@ -114,6 +114,8 @@ def get_layout():
         ]),
         dbc.ButtonGroup([
             dbc.Button('Record', id=f'{APP_ID}_record_button', color='primary', disabled=False),
+            dbc.Button('Stop Record', id=f'{APP_ID}_stop_record_button', color='primary', disabled=False),
+            dbc.Button('Play', id=f'{APP_ID}_play_button', color='primary', disabled=False),
             dcc.Input(id=f'{APP_ID}_frame_id', type='url', 
                           placeholder='frame id here',
                           debounce=True, style={"width": "300px"}),

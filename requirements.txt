@@ -22,5 +22,6 @@ dash_uploader
 dash_extensions
 pandas
 dash-bootstrap-components==0.13.1
-opencv-python==4.6.0.66
+opencv-python-headless
 pytube
+scipy

@@ -178,7 +178,12 @@ class VideoToLed():
         self.open_video()
         
     def record(self):
+        self.led_array = []
         self.record_flag = True
+        
+    def stop_record(self):
+        self.pause()
+        self.record_flag = False
         
     def pause(self):
         self.pause_flag = True
