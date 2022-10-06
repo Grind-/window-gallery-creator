@@ -114,7 +114,8 @@ def get_layout():
         dbc.ButtonGroup([
             # dbc.Button('Record', id=f'{APP_ID}_record_button', color='primary', disabled=False),
             # dbc.Button('Stop Record', id=f'{APP_ID}_stop_record_button', color='primary', disabled=False),
-            # dbc.Button('Play', id=f'{APP_ID}_play_button', color='primary', disabled=False),
+            dbc.Button('Download Arduino Code', id=f'{APP_ID}_download_arduino_code_button', color='primary', disabled=False),
+            dcc.Download(id=f"{APP_ID}_download_ino_file"),
             dcc.Input(id=f'{APP_ID}_frame_id', type='url', 
                           placeholder='frame id here',
                           debounce=True, style={"width": "300px"}),
@@ -180,10 +181,36 @@ def add_video_editing_dashboard(dash_app):
         filename_base64_bytes = base64.b64encode(filename_bytes)
         filename_base64_string = filename_base64_bytes.decode("ascii")
         video_feed_url = f'{URL_BASE}video_feed/{path_base64_string}/{filename_base64_string}/{rect_bot}/{rect_top}/{rect_left}/{rect_right}/{clip_start}/{clip_end}/{thickness}'
-        video_path=os.path.join(path, filename)
         if os.path.exists(os.path.join(path, filename)):
             return html.Img(src=video_feed_url, style={'width': '500px'})
-    
+        
+    @dash_app.callback(Output(f'{APP_ID}_download_ino_file', 'data'),
+            [
+                State(f'{APP_ID}_thickness_input', 'value'),
+                State(f'{APP_ID}_large_upload_fn_store', 'data'),
+                State(f'{APP_ID}_t_start_input', 'value'),
+                State(f'{APP_ID}_t_end_input', 'value'),
+                State(f'{APP_ID}_rect_bot_input', 'value'),
+                State(f'{APP_ID}_rect_top_input', 'value'),
+                State(f'{APP_ID}_rect_left_input', 'value'),
+                State(f'{APP_ID}_rect_right_input', 'value'),
+                State(f'{APP_ID}_video_filename', 'value'),
+                Input(f'{APP_ID}_download_arduino_code_button', 'n_clicks')
+            ])
+    def download_arduino_code_callback(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right, video_filename, n_clicks):
+        if n_clicks:
+            rect_top = video_to_led.clip_height - rect_top
+            rect_right = video_to_led.clip_width - rect_right
+            path = os.path.join('apps', 'static', 'assets', '.temp')
+            filename = "color stripes.mp4"
+            if video_filename:
+                filename = video_filename
+            video_for_download = VideoToLed()
+            video_for_download.open_video_from_file(path, filename)
+            video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
+            video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
+            video_for_download.stream_to_arduino()
+            return dict(content=video_for_download.download_arduino_code(), filename="sequence.ino")
     
     
     @dash_app.callback(Output(f'{APP_ID}_video_filename', 'value'),

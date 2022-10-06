@@ -11,10 +11,13 @@ import sys
 import time
 import cv2
 import pafy
-
+import struct
+import serial
+import time
 import numpy as np
 from apps.util.youtube_downloader import YoutubeDownloader
 from scipy.ndimage import interpolation
+from json import dumps, JSONEncoder
 import os.path
 
 download_destination = 'apps/static/assets/.temp'
@@ -40,8 +43,8 @@ class VideoToLed():
         self.fps = 0
         self.cap = cv2.VideoCapture()
         self.video_name = ''
-        self.led_hor = 25
-        self.led_ver = 30
+        self.led_hor = 50
+        self.led_ver = 70
         self.pause_flag = False
         self.record_flag = False
         
@@ -241,3 +244,110 @@ class VideoToLed():
         img = cv2.resize(img[1:size_vertical-1, 1:size_horizontal-1], 
                          dsize=(self.clip_width, self.clip_height), interpolation=cv2.INTER_CUBIC)
         return img
+    
+    def stream_to_arduino(self):
+        sequence_array = self.get_sequence_array()
+        sec = 1 / self.fps
+        strand = NeoPixel('COM8')
+        fc = 0
+        led = 1
+        beginningOfTime = time.process_time()
+        start = time.process_time()
+        goAgainAt = start + sec
+        led_count = self.led_hor*2 + self.led_ver*2
+        
+        while True:
+            print("Loop #%d at time %f" % (fc, time.process_time() - beginningOfTime))
+            while led < (2*self.led_hor+2*self.led_ver):
+                strand.setPixelColor(led, sequence_array[fc][led][0], sequence_array[fc][led][1], sequence_array[fc][led][2])
+                # strand.show()
+                led += 1
+                if led >= led_count:
+                    led = 1
+                    break
+            fc += 1
+            if time.process_time() > goAgainAt:
+                print("Oops, missed an iteration")
+                goAgainAt += sec
+                continue
+            # Otherwise, wait for next interval
+            timeToSleep = goAgainAt - time.process_time()
+            goAgainAt += sec
+            time.sleep(timeToSleep)
+            print(f'time to sleep: {timeToSleep}')
+
+            if fc == len(sequence_array):
+                fc = 0
+    
+    def get_sequence_array(self):
+        sequence_array = []
+        while True:
+            if self.frame_counter >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
+                self.frame_counter = self.clip_start_frame #Or whatever as long as it is the same as next line
+                self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                break
+            self.frame_counter += 1
+            ret, video_frame = self.cap.read()
+            if cv2.waitKey(25) & 0xFF == ord('q'):
+                pass
+            # if mirrow == True:
+            #     frame = cv2.flip(frame, 1) 
+            print(self.frame_counter)
+            if ret == True:
+                # create led arrays and frame
+                led_arrays = self.generate_led_arrays(video_frame)
+                led_array = np.concatenate((led_arrays), axis=0)
+                sequence_array.append(led_array)
+
+            else: 
+                print(f'lost frame nr {self.frame_counter}')
+                continue
+        return sequence_array
+    
+    def download_arduino_code(self):
+        print('download')
+        sequence_array = self.get_sequence_array()
+        index = 2
+        json_string = dumps(sequence_array, cls=NumpyArrayEncoder)
+        
+        ino_template_file = os.path.join('apps', 'static', 'assets', 'arduino_template.ino')
+        with open(ino_template_file, "r") as f:
+            contents = f.readlines()
+        
+        contents.insert(index, json_string)
+
+        return contents
+    
+class NumpyArrayEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return JSONEncoder.default(self, obj)
+    
+class NeoPixel(object):
+    # from https://github.com/mdaffin/PyNeoPixel
+    def __init__(self, port):
+        self.port = port
+        self.ser = serial.Serial(self.port, 115200, timeout=60)
+        self.command_count = 0
+        
+
+    def setPixelColor(self, pixel, red, green, blue):
+        message = struct.pack('>HBBB', pixel, red, green, blue)
+        self.command_count += 1
+        if self.command_count >=255:
+            self.command_count = 0
+        #print(f'message: {message}')
+        self.ser.write(message)
+        #response = self.ser.readline()
+        #print(f'response: {response}')
+    
+
+    def show(self):
+        message = struct.pack('BBB', ord(':'), self.command_count, ord('s'))
+        self.command_count += 1
+        # print(message)
+        self.ser.write(message)
+        # response = self.ser.readline()
+        # print(response)
+
