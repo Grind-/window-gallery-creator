@@ -5,6 +5,7 @@ Copyright (c) 2019 - present AppSeed.us
 from copy import deepcopy
 from datetime import datetime
 from json import dump, dumps
+from apps.config import Config
 
 from flask import render_template, redirect, request, url_for, send_from_directory
 from flask_login import (
@@ -84,8 +85,9 @@ def videoapp():
 
 @blueprint.route('/downloads/<path:path>')
 def serve_static(path):
+    basedir = Config.basedir
     return send_from_directory(
-        Path("downloads"), path, as_attachment=True
+        Path(basedir),  path, as_attachment=True
             )
 
 

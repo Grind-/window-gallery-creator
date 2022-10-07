@@ -19,8 +19,20 @@ from apps.util.youtube_downloader import YoutubeDownloader
 from scipy.ndimage import interpolation
 from json import dumps, JSONEncoder
 import os.path
+import paho.mqtt.client as mqtt
+from matplotlib.colors import rgb2hex
+from apps.creator.mqtt import MqttCore
 
 download_destination = 'apps/static/assets/.temp'
+
+config = {}
+config['frame_id'] = '0000001'
+config['topic_sequence'] = '/frame/' + config['frame_id'] + '/sequence/'
+config['topic_frame_connected'] = '/frame_connected/'
+config['client_id'] = 'window_gallery'
+config['password'] = 'password'
+mqtt_client = MqttCore()
+mqtt_client.start(config['topic_frame_connected'], None)
 
 class VideoToLed():
     def __init__(self):
@@ -200,7 +212,10 @@ class VideoToLed():
         resized_ver = np.array(cv2.resize(frame, 
                                           dsize=(int(self.clip_width/self.rect_thickness), self.led_ver), 
                                           interpolation=cv2.INTER_CUBIC))
-
+        
+        
+            
+            #resized_ver_hex = [ rgb2hex(resized_ver[i,:]) for i in range(resized_ver.shape[0]) ]
         # cv2.namedWindow('hor')
         # cv2.imshow( 'hor', resized_hor)
         # cv2.namedWindow('ver')
@@ -212,6 +227,7 @@ class VideoToLed():
         # if mirrow == True:
         #     frame = cv2.flip(frame, 1) 
 
+        
 
         line_top = resized_hor[-1, :]
         line_bot = resized_hor[0, :]
@@ -224,8 +240,10 @@ class VideoToLed():
                                            np.flip(line_left), 
                                            line_top,   
                                            line_right]))
-            
-        return [line_top, line_bot, line_left, line_right]
+        
+        array = [line_top, line_bot, line_left, line_right]
+
+        return array
      
     def generate_led_image(self, led_arrays: []):
         # print('generate_led_image')
@@ -279,7 +297,7 @@ class VideoToLed():
             if fc == len(sequence_array):
                 fc = 0
     
-    def get_sequence_array(self):
+    def get_sequence_array(self, hex: bool=False):
         sequence_array = []
         while True:
             if self.frame_counter >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
@@ -296,14 +314,38 @@ class VideoToLed():
             if ret == True:
                 # create led arrays and frame
                 led_arrays = self.generate_led_arrays(video_frame)
+                
                 led_array = np.concatenate((led_arrays), axis=0)
-                sequence_array.append(led_array)
+                led_array_hex = [ rgb2hex(led_array[i,:]/255) for i in range(led_array.shape[0]) ]
+                # led_array_pack = struct.pack('%ss' % len(led_array_hex), led_array_hex)
+                if hex:
+                    # sequence_array = np.concatenate((sequence_array, led_array_hex), axis=None)
+                    sequence_array.append(led_array_hex)
+                else:
+                    # sequence_array = np.concatenate((sequence_array, led_array), axis=None)
+                    sequence_array.append(led_array)
 
             else: 
                 print(f'lost frame nr {self.frame_counter}')
                 continue
-        return sequence_array
+        return np.array(sequence_array)
     
+    def send_over_mqtt(self, frame_id):
+        print('send')
+        sequence_array = self.get_sequence_array()
+        # sequence_array = np.array([0]*5000)
+        # mqtt_client.publish(config['topic_sequence'], bytearray(sequence_array))
+        mqtt_client.publish(config['topic_sequence'], sequence_array.tobytes())
+        
+    def save_to_file(self):
+        print('send')
+        sequence_array = self.get_sequence_array()
+        bin_file = os.path.join('apps', 'sequences', 'sequence.bin')
+        with open(bin_file, "wb") as f:
+            f.write(sequence_array.tobytes())
+            f.close()
+        return f
+        
     def download_arduino_code(self):
         print('download')
         sequence_array = self.get_sequence_array()

@@ -27,3 +27,4 @@ pytube
 scipy
 pyserial
 authlib
+matplotlib
