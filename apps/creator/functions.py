@@ -323,7 +323,7 @@ class VideoToLed():
                     sequence_array.append(led_array_hex)
                 else:
                     # sequence_array = np.concatenate((sequence_array, led_array), axis=None)
-                    sequence_array.append(led_array)
+                    sequence_array.append(led_arrays)
 
             else: 
                 print(f'lost frame nr {self.frame_counter}')
@@ -332,15 +332,18 @@ class VideoToLed():
     
     def send_over_mqtt(self, frame_id):
         print('send')
-        sequence_array = self.get_sequence_array()
+        # sequence_array = self.get_sequence_array()
         # sequence_array = np.array([0]*5000)
         # mqtt_client.publish(config['topic_sequence'], bytearray(sequence_array))
-        mqtt_client.publish(config['topic_sequence'], sequence_array.tobytes())
+        # mqtt_client.publish(config['topic_sequence'], sequence_array.tobytes())
+        mqtt_client.publish(config['topic_sequence'], frame_id)
         
     def save_to_file(self):
         print('send')
         sequence_array = self.get_sequence_array()
         bin_file = os.path.join('apps', 'sequences', 'sequence.bin')
+        np_file = os.path.join('apps', 'sequences', 'sequence.npy')
+        np.save(np_file, sequence_array)
         with open(bin_file, "wb") as f:
             f.write(sequence_array.tobytes())
             f.close()
