@@ -28,4 +28,4 @@ scipy
 pyserial
 authlib
 matplotlib
-paho
+paho-mqtt
