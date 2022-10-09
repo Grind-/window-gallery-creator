@@ -27,7 +27,7 @@ download_destination = 'apps/static/assets/.temp'
 
 config = {}
 config['frame_id'] = '0000001'
-config['topic_sequence'] = '/frame/' + config['frame_id'] + '/sequence/'
+config['topic_sequence'] = '/sequence/' + config['frame_id']
 config['topic_frame_connected'] = '/frame_connected/'
 config['client_id'] = 'window_gallery'
 config['password'] = 'password'
@@ -212,22 +212,6 @@ class VideoToLed():
         resized_ver = np.array(cv2.resize(frame, 
                                           dsize=(int(self.clip_width/self.rect_thickness), self.led_ver), 
                                           interpolation=cv2.INTER_CUBIC))
-        
-        
-            
-            #resized_ver_hex = [ rgb2hex(resized_ver[i,:]) for i in range(resized_ver.shape[0]) ]
-        # cv2.namedWindow('hor')
-        # cv2.imshow( 'hor', resized_hor)
-        # cv2.namedWindow('ver')
-        # cv2.imshow( "ver", resized_ver)
-        # cv2.namedWindow('Frame')
-        # cv2.imshow( "Frame", frame)
-        # if cv2.waitKey(25) & 0xFF == ord('q'):
-        #     pass
-        # if mirrow == True:
-        #     frame = cv2.flip(frame, 1) 
-
-        
 
         line_top = resized_hor[-1, :]
         line_bot = resized_hor[0, :]
@@ -302,55 +286,41 @@ class VideoToLed():
         led_array_seq = []
         while True:
             if self.frame_counter >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
-                self.frame_counter = self.clip_start_frame #Or whatever as long as it is the same as next line
+                self.frame_counter = self.clip_start_frame
                 self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 break
             self.frame_counter += 1
             ret, video_frame = self.cap.read()
-            # if cv2.waitKey(25) & 0xFF == ord('q'):
-            #     pass
             # if mirrow == True:
             #     frame = cv2.flip(frame, 1) 
             print(self.frame_counter)
             if ret == True:
                 # create led arrays and frame
                 led_arrays = self.generate_led_arrays(video_frame)
-                
                 led_array_seq.append(np.concatenate([np.concatenate(np.flip(led_arrays[1])), 
                                            np.concatenate(np.flip(led_arrays[2])), 
                                            np.concatenate(led_arrays[0]),   
                                            np.concatenate(led_arrays[3])]))
-                #led_array = np.concatenate((led_arrays), axis=0)
-                #led_array = np.concatenate((led_array), axis=0)
-                # sequence_array = np.concatenate((sequence_array, led_array), axis=None)
-                #sequence_array.append(led_array)
-
             else: 
                 print(f'lost frame nr {self.frame_counter}')
                 continue
         return np.array(led_array_seq)
     
-    def send_over_mqtt(self, frame_id):
+    def send_over_mqtt(self, frame_id: str):
         print('send')
-        # sequence_array = self.get_sequence_array()
-        # sequence_array = np.array([0]*5000)
-        # mqtt_client.publish(config['topic_sequence'], bytearray(sequence_array))
-        # mqtt_client.publish(config['topic_sequence'], sequence_array.tobytes())
         mqtt_client.publish(config['topic_sequence'], frame_id)
         
-    def save_to_file(self):
+    def save_to_file(self, frame_id: str):
         print('send')
         sequence_array = self.get_sequence_array().astype(np.uint8)
-        bin_file = os.path.join('apps', 'sequences', 'sequence.bin')
-        # np_file = os.path.join('apps', 'sequences', 'sequence.npy')
-        # np.save(np_file, sequence_array)
-        # sequence_array = np.array([1,2,3,4,5, 6, 7, 8, 9, 10]).astype(np.uint8)
+        filename = frame_id + ".bin"
+        bin_file = os.path.join('apps', 'sequences', filename)
         with open(bin_file, "wb") as f:
             f.write(sequence_array.tobytes())
             f.close()
-        # return f
-        
-        # np.savetxt(bin_file, sequence_array, fmt='%i',delimiter=' ', newline='')
+        return True
+        # with open(bin_file, "rb") as f:
+        #     print(np.fromfile(f, dtype=np.uint8))
         
     def download_arduino_code(self):
         print('download')

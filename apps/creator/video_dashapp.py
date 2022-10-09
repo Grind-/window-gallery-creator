@@ -119,7 +119,7 @@ def get_layout():
             dcc.Input(id=f'{APP_ID}_frame_id', type='url', 
                           placeholder='frame id here',
                           debounce=True, style={"width": "300px"}),
-            dbc.Button('Send Sequence', id=f'{APP_ID}_send_sequence', color='primary', disabled=False),
+            dbc.Button('Send Sequence', id=f'{APP_ID}_send_sequence', color='primary', disabled=True),
         ]),
     ])
     return layout
@@ -182,7 +182,7 @@ def add_video_editing_dashboard(dash_app):
         if os.path.exists(os.path.join(path, filename)):
             return html.Img(src=video_feed_url, style={'width': '500px'})
         
-    @dash_app.callback(Output(f'{APP_ID}_download_sequence_file', 'data'),
+    @dash_app.callback(Output(f'{APP_ID}_send_sequence', 'disabled'),
             [
                 State(f'{APP_ID}_thickness_input', 'value'),
                 State(f'{APP_ID}_large_upload_fn_store', 'data'),
@@ -193,9 +193,10 @@ def add_video_editing_dashboard(dash_app):
                 State(f'{APP_ID}_rect_left_input', 'value'),
                 State(f'{APP_ID}_rect_right_input', 'value'),
                 State(f'{APP_ID}_video_filename', 'value'),
+                State(f'{APP_ID}_frame_id', 'value'),
                 Input(f'{APP_ID}_create_sequence_button', 'n_clicks')
             ])
-    def download_arduino_code_callback(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right, video_filename, n_clicks):
+    def create_sequence_callback(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right, video_filename, frame_id, n_clicks):
         if n_clicks:
             rect_top = video_to_led.clip_height - rect_top
             rect_right = video_to_led.clip_width - rect_right
@@ -207,9 +208,8 @@ def add_video_editing_dashboard(dash_app):
             video_for_download.open_video_from_file(path, filename)
             video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
             video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
-            # video_for_download.stream_to_arduino()
-            video_for_download.save_to_file()
-            # return dict(content=video_for_download.download_arduino_code(), filename="sequence.bin")
+            status = video_for_download.save_to_file(frame_id)
+            return not status
     
     @dash_app.callback(Output(f'{APP_ID}_status', 'data'),
             [
