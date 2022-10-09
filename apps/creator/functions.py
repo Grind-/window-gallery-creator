@@ -55,8 +55,8 @@ class VideoToLed():
         self.fps = 0
         self.cap = cv2.VideoCapture()
         self.video_name = ''
-        self.led_hor = 55
-        self.led_ver = 75
+        self.led_hor = 65
+        self.led_ver = 85
         self.pause_flag = False
         self.record_flag = False
         
@@ -302,7 +302,6 @@ class VideoToLed():
                 fc = 0
     
     def get_sequence_array(self):
-        self.is_playing = False
         led_array_seq = []
         while True:
             if self.frame_counter >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
@@ -324,7 +323,6 @@ class VideoToLed():
             else: 
                 print(f'lost frame nr {self.frame_counter}')
                 continue
-            self.is_playing = True
         return np.array(led_array_seq)
     
     def send_over_mqtt(self, frame_id: str):
