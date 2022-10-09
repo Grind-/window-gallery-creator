@@ -242,7 +242,7 @@ class VideoToLed():
                                            line_right]))
         
         array = [line_top, line_bot, line_left, line_right]
-
+        
         return array
      
     def generate_led_image(self, led_arrays: []):
@@ -297,8 +297,9 @@ class VideoToLed():
             if fc == len(sequence_array):
                 fc = 0
     
-    def get_sequence_array(self, hex: bool=False):
+    def get_sequence_array(self):
         sequence_array = []
+        led_array_seq = []
         while True:
             if self.frame_counter >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
                 self.frame_counter = self.clip_start_frame #Or whatever as long as it is the same as next line
@@ -315,20 +316,19 @@ class VideoToLed():
                 # create led arrays and frame
                 led_arrays = self.generate_led_arrays(video_frame)
                 
-                led_array = np.concatenate((led_arrays), axis=0)
-                led_array_hex = [ rgb2hex(led_array[i,:]/255) for i in range(led_array.shape[0]) ]
-                # led_array_pack = struct.pack('%ss' % len(led_array_hex), led_array_hex)
-                if hex:
-                    # sequence_array = np.concatenate((sequence_array, led_array_hex), axis=None)
-                    sequence_array.append(led_array_hex)
-                else:
-                    # sequence_array = np.concatenate((sequence_array, led_array), axis=None)
-                    sequence_array.append(led_arrays)
+                led_array_seq.append(np.concatenate([np.concatenate(np.flip(led_arrays[1])), 
+                                           np.concatenate(np.flip(led_arrays[2])), 
+                                           np.concatenate(led_arrays[0]),   
+                                           np.concatenate(led_arrays[3])]))
+                #led_array = np.concatenate((led_arrays), axis=0)
+                #led_array = np.concatenate((led_array), axis=0)
+                # sequence_array = np.concatenate((sequence_array, led_array), axis=None)
+                #sequence_array.append(led_array)
 
             else: 
                 print(f'lost frame nr {self.frame_counter}')
                 continue
-        return np.array(sequence_array)
+        return np.array(led_array_seq)
     
     def send_over_mqtt(self, frame_id):
         print('send')
@@ -340,14 +340,18 @@ class VideoToLed():
         
     def save_to_file(self):
         print('send')
-        sequence_array = self.get_sequence_array()
+        sequence_array = self.get_sequence_array().astype(np.uint8)
+        text_file = os.path.join('apps', 'sequences', 'sequence.txt')
         bin_file = os.path.join('apps', 'sequences', 'sequence.bin')
-        np_file = os.path.join('apps', 'sequences', 'sequence.npy')
-        np.save(np_file, sequence_array)
-        with open(bin_file, "wb") as f:
-            f.write(sequence_array.tobytes())
-            f.close()
-        return f
+        # np_file = os.path.join('apps', 'sequences', 'sequence.npy')
+        # np.save(np_file, sequence_array)
+        # sequence_array = np.array([1,2,3,4,5, 6, 7, 8, 9, 10]).astype(np.uint8)
+        # with open(bin_file, "wb") as f:
+        #     f.write(sequence_array.tobytes())
+        #     f.close()
+        # return f
+        
+        np.savetxt(bin_file, sequence_array, fmt='%i',delimiter='', newline='')
         
     def download_arduino_code(self):
         print('download')
