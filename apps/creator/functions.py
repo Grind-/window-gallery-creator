@@ -55,8 +55,8 @@ class VideoToLed():
         self.fps = 0
         self.cap = cv2.VideoCapture()
         self.video_name = ''
-        self.led_hor = 50
-        self.led_ver = 70
+        self.led_hor = 55
+        self.led_ver = 75
         self.pause_flag = False
         self.record_flag = False
         
@@ -154,7 +154,8 @@ class VideoToLed():
                     
                     # create led arrays and frame
                     led_arrays = self.generate_led_arrays(video_frame)
-                    led_frame = self.generate_led_image(led_arrays)
+                    led_frame = self.generate_led_frame_image(led_arrays)
+                    led_linear = self.generate_led_linear_image(led_arrays)
 
                     # create rectangle
                     rect_start_point = (self.rect_left, self.rect_top)
@@ -167,7 +168,7 @@ class VideoToLed():
                     video_frame = cv2.addWeighted(overlay, alpha, video_frame, 1 - alpha, 0)
                     
                     # stacking both frames
-                    frame = np.vstack((video_frame, led_frame))
+                    frame = np.vstack((video_frame, led_frame, led_linear))
                     
                     # transform to jpeg
                     ret, buffer = cv2.imencode('.jpg', frame)
@@ -229,8 +230,8 @@ class VideoToLed():
         
         return array
      
-    def generate_led_image(self, led_arrays: []):
-        # print('generate_led_image')
+    def generate_led_frame_image(self, led_arrays: []):
+        # print('generate_led_frame_image')
         size_horizontal = led_arrays[0].shape[0]
         size_vertical = led_arrays[2].shape[0]
         img = np.zeros([size_vertical,size_horizontal,3],dtype=np.uint8)
@@ -245,6 +246,25 @@ class VideoToLed():
         
         img = cv2.resize(img[1:size_vertical-1, 1:size_horizontal-1], 
                          dsize=(self.clip_width, self.clip_height), interpolation=cv2.INTER_CUBIC)
+        return img
+    
+    def generate_led_linear_image(self, led_arrays: []):
+        linear_array = np.concatenate([np.flipud(led_arrays[2]), 
+                                      (led_arrays[1]), 
+                                      led_arrays[3],   
+                                      np.flipud(led_arrays[0])])
+        # print('generate_led_frame_image')
+        size_horizontal = linear_array.shape[0]
+        size_vertical = 20
+        img = np.zeros([size_vertical,size_horizontal,3],dtype=np.uint8)
+        img.fill(5) # or img[:] = 255
+        
+        # adding light effect to shine into the center of the image
+        for i in range (10):
+            img[-1-i,:] = linear_array/(i+1)
+        
+        img = cv2.resize(img[1:size_vertical-1, 1:size_horizontal-1], 
+                         dsize=(self.clip_width, size_vertical*2), interpolation=cv2.INTER_CUBIC)
         return img
     
     def stream_to_arduino(self):
@@ -297,10 +317,10 @@ class VideoToLed():
             if ret == True:
                 # create led arrays and frame
                 led_arrays = self.generate_led_arrays(video_frame)
-                led_array_seq.append(np.concatenate([np.concatenate(np.flip(led_arrays[1])), 
-                                           np.concatenate(np.flip(led_arrays[2])), 
-                                           np.concatenate(led_arrays[0]),   
-                                           np.concatenate(led_arrays[3])]))
+                led_array_seq.append(np.concatenate([np.concatenate(np.flipud(led_arrays[2])), 
+                                      np.concatenate(led_arrays[1]), 
+                                      np.concatenate(led_arrays[3]),   
+                                      np.concatenate(np.flipud(led_arrays[0]))]))
             else: 
                 print(f'lost frame nr {self.frame_counter}')
                 continue

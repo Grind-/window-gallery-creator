@@ -124,7 +124,8 @@ class MqttSubscriberThread(Thread):
         print("Subscribed: " + str(mid) + " " + str(granted_qos))
 
     def on_log(self, mqttc, obj, level, string):
-        print(string)
+        # print(string)
+        pass
 
     def get_access_token(self, url, client_id, client_secret):
         response = requests.post(

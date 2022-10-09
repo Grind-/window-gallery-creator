@@ -20,8 +20,6 @@ from distutils.dir_util import copy_tree
 APP_ID = 'windwow_gallery_creator'
 URL_BASE = '/dashapp/'
 MIN_HEIGHT = 600
-led_hor = 30
-led_ver = 30
 
 # copy subdirectory example
 from_directory = "apps/static/assets/videos"
