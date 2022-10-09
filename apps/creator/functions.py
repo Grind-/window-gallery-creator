@@ -307,8 +307,8 @@ class VideoToLed():
                 break
             self.frame_counter += 1
             ret, video_frame = self.cap.read()
-            if cv2.waitKey(25) & 0xFF == ord('q'):
-                pass
+            # if cv2.waitKey(25) & 0xFF == ord('q'):
+            #     pass
             # if mirrow == True:
             #     frame = cv2.flip(frame, 1) 
             print(self.frame_counter)
@@ -341,7 +341,6 @@ class VideoToLed():
     def save_to_file(self):
         print('send')
         sequence_array = self.get_sequence_array().astype(np.uint8)
-        text_file = os.path.join('apps', 'sequences', 'sequence.txt')
         bin_file = os.path.join('apps', 'sequences', 'sequence.bin')
         # np_file = os.path.join('apps', 'sequences', 'sequence.npy')
         # np.save(np_file, sequence_array)
