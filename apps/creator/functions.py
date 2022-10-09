@@ -316,10 +316,10 @@ class VideoToLed():
             if ret == True:
                 # create led arrays and frame
                 led_arrays = self.generate_led_arrays(video_frame)
-                led_array_seq.append(np.concatenate([np.concatenate(np.flipud(led_arrays[2])), 
+                led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])), 
                                       np.concatenate(led_arrays[1]), 
                                       np.concatenate(led_arrays[3]),   
-                                      np.concatenate(np.flipud(led_arrays[0]))]))
+                                      np.concatenate(np.flipud(led_arrays[0]))])
             else: 
                 print(f'lost frame nr {self.frame_counter}')
                 continue
@@ -332,6 +332,7 @@ class VideoToLed():
     def save_to_file(self, frame_id: str):
         print('send')
         sequence_array = self.get_sequence_array().astype(np.uint8)
+        print(len(sequence_array)/(2*(self.led_hor + self.led_ver))/3)
         filename = frame_id + ".bin"
         bin_file = os.path.join('apps', 'sequences', filename)
         with open(bin_file, "wb") as f:
