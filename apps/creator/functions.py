@@ -345,12 +345,12 @@ class VideoToLed():
         # np_file = os.path.join('apps', 'sequences', 'sequence.npy')
         # np.save(np_file, sequence_array)
         # sequence_array = np.array([1,2,3,4,5, 6, 7, 8, 9, 10]).astype(np.uint8)
-        # with open(bin_file, "wb") as f:
-        #     f.write(sequence_array.tobytes())
-        #     f.close()
+        with open(bin_file, "wb") as f:
+            f.write(sequence_array.tobytes())
+            f.close()
         # return f
         
-        np.savetxt(bin_file, sequence_array, fmt='%i',delimiter='', newline='')
+        # np.savetxt(bin_file, sequence_array, fmt='%i',delimiter=' ', newline='')
         
     def download_arduino_code(self):
         print('download')
