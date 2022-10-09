@@ -302,7 +302,7 @@ class VideoToLed():
                 fc = 0
     
     def get_sequence_array(self):
-        sequence_array = []
+        self.is_playing = False
         led_array_seq = []
         while True:
             if self.frame_counter >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
@@ -324,6 +324,7 @@ class VideoToLed():
             else: 
                 print(f'lost frame nr {self.frame_counter}')
                 continue
+            self.is_playing = True
         return np.array(led_array_seq)
     
     def send_over_mqtt(self, frame_id: str):
