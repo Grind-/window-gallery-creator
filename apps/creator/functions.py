@@ -224,7 +224,6 @@ class VideoToLed():
             img[i, :] = led_arrays[1]/(i+1)
             img[:, -1-i] = led_arrays[3]/(i+1)
             img[:, i] = led_arrays[2]/(i+1)
-        
         img = cv2.resize(img[1:size_vertical-1, 1:size_horizontal-1], 
                          dsize=(self.clip_width, self.clip_height), interpolation=cv2.INTER_CUBIC)
         return img
@@ -248,13 +247,11 @@ class VideoToLed():
                          dsize=(self.clip_width, size_vertical*2), interpolation=cv2.INTER_CUBIC)
         return img
     
-
-    
     def get_sequence_array(self):
         led_array_seq = []
         while True:
             print(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
-            if self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.clip_end_frame-1:
+            if self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.clip_end_frame-2:
                 # self.frame_counter = self.clip_start_frame
                 # self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
                 break
@@ -264,6 +261,7 @@ class VideoToLed():
             if ret == True:
                 # create led arrays and frame
                 led_arrays = self.generate_led_arrays(video_frame)
+                # led_arrays = [[[1,2,3],[4,5,6]], [[7,8,9],[10,11,12]], [[13,14,15],[16,17,18]], [[19,20,21],[22,23,24]]]
                 led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])), 
                                       np.concatenate(led_arrays[1]), 
                                       np.concatenate(led_arrays[3]),   
@@ -281,7 +279,6 @@ class VideoToLed():
         mqtt_client.stop(config['topic_frame_connected'])
         
     def save_to_file(self, frame_id: str):
-        print('send')
         sequence_array = self.get_sequence_array().astype(np.uint8)
         print(len(sequence_array)/(2*(self.led_hor + self.led_ver))/3)
         filename = frame_id + ".bin"
@@ -290,11 +287,6 @@ class VideoToLed():
             f.write(sequence_array.tobytes())
             f.close()
         return True
-        # with open(bin_file, "rb") as f:
-        #     print(np.fromfile(f, dtype=np.uint8))
-
-
-
 
 
     # def stream_to_arduino(self):
