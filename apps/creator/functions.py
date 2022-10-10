@@ -141,7 +141,7 @@ class VideoToLed():
                 if self.stop_flag:
                         self.release()
                         break
-                if self.frame_counter >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.frame_counter >= self.clip_end_frame-1 or self.restart_flag:
+                if self.frame_counter >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT) -1 or self.frame_counter >= self.clip_end_frame-1 or self.restart_flag:
                     self.frame_counter = self.clip_start_frame #Or whatever as long as it is the same as next line
                     self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     self.restart_flag = False
