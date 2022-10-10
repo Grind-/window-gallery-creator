@@ -20,8 +20,7 @@ config['topic_sequence'] = '/sequence/' + config['frame_id']
 config['topic_frame_connected'] = '/frame_connected/'
 config['client_id'] = 'window_gallery'
 config['password'] = 'password'
-mqtt_client = MqttCore()
-mqtt_client.start(config['topic_frame_connected'], None)
+
 
 class VideoToLed():
     def __init__(self):
@@ -276,7 +275,10 @@ class VideoToLed():
     
     def send_over_mqtt(self, frame_id: str):
         print('send')
+        mqtt_client = MqttCore()
+        mqtt_client.start(config['topic_frame_connected'], None)
         mqtt_client.publish(config['topic_sequence'], frame_id)
+        mqtt_client.stop(config['topic_frame_connected'])
         
     def save_to_file(self, frame_id: str):
         print('send')
