@@ -3,27 +3,16 @@ Created on 10.08.2022
 
 @author: jhirte
 '''
-from io import BytesIO
-import pickle
-import platform
-import string
-import sys
 import time
 import cv2
 import pafy
-import struct
-import serial
-import time
 import numpy as np
 from apps.util.youtube_downloader import YoutubeDownloader
-from scipy.ndimage import interpolation
-from json import dumps, JSONEncoder
 import os.path
-import paho.mqtt.client as mqtt
-from matplotlib.colors import rgb2hex
 from apps.creator.mqtt import MqttCore
 
 download_destination = 'apps/static/assets/.temp'
+(major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
 
 config = {}
 config['frame_id'] = '0000001'
@@ -40,7 +29,6 @@ class VideoToLed():
         self.is_playing = False
         self.restart_flag = False
         self.stop_flag = False
-        self.frame_counter = 0
         self.clip_start_frame = 0
         self.clip_end_frame = 100000
         self.clip_width = 0
@@ -61,17 +49,7 @@ class VideoToLed():
         self.record_flag = False
         
     def get_clip_duration(self):
-        return self.clip_duration
-    
-    def open_video(self):
-        
-        self.clip_width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.clip_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) 
-        self.fps = self.cap.get(cv2. CAP_PROP_FPS) # OpenCV2 version 2 used "CV_CAP_PROP_FPS"
-        self.frame_count = int(self.cap.get(cv2. CAP_PROP_FRAME_COUNT))
-        self.clip_duration = self.frame_count/self.fps
-        if (self.cap.isOpened()== False): 
-            print("Error opening video stream or file")
+        return self.clip_duration        
             
     def load_youtube_video(self, url: str):
         video = pafy.new(url)
@@ -85,9 +63,17 @@ class VideoToLed():
         
     def open_video_from_file(self, path, filename):
         filepath = os.path.join(path, filename)
+        if self.cap:
+            self.cap.release()
         self.cap = cv2.VideoCapture(filepath)
         self.video_name = filename
-        self.open_video()
+        self.clip_width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.clip_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) 
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS) 
+        self.frame_count = int(self.cap.get(cv2. CAP_PROP_FRAME_COUNT))
+        self.clip_duration = self.frame_count/self.fps
+        if (self.cap.isOpened()== False): 
+            print("Error opening video stream or file")
         
     def pause(self):
         self.pause_flag = True
@@ -123,14 +109,12 @@ class VideoToLed():
         if end_sec and end_sec > start_sec:
             self.clip_end_frame = int(self.fps*end_sec)-1
         if start_sec and start_sec < end_sec:
-            self.clip_start_frame = self.fps*start_sec
-        from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
-        ffmpeg_extract_subclip(download_destination+'/'+self.video_name, self.clip_start_frame/self.fps, 
-                               self.clip_end_frame/self.fps, targetname=download_destination+'/cut'+self.video_name)
-
-        self.cap = cv2.VideoCapture(download_destination+'/cut'+self.video_name)
-        self.frame_count = int(self.cap.get(cv2. CAP_PROP_FRAME_COUNT))
-        self.clip_duration = self.frame_count/self.fps
+            self.clip_start_frame = int(self.fps*start_sec)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
+        # from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
+        # ffmpeg_extract_subclip(download_destination+'/'+self.video_name, self.clip_start_frame/self.fps, 
+        #                        self.clip_end_frame/self.fps, targetname=download_destination+'/cut'+self.video_name)
+        # self.open_video_from_file(download_destination, 'cut'+self.video_name)
     
     def start(self):
         print('start')
@@ -141,13 +125,11 @@ class VideoToLed():
                 if self.stop_flag:
                         self.release()
                         break
-                if self.frame_counter >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT) -1 or self.frame_counter >= self.clip_end_frame-1 or self.restart_flag:
-                    self.frame_counter = self.clip_start_frame #Or whatever as long as it is the same as next line
-                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                if self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.clip_end_frame-1 or self.restart_flag:
+                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
                     self.restart_flag = False
                         
                 time.sleep(1/self.fps)
-                self.frame_counter += 1
                 ret, video_frame = self.cap.read()
                 
                 if ret == True:
@@ -267,52 +249,19 @@ class VideoToLed():
                          dsize=(self.clip_width, size_vertical*2), interpolation=cv2.INTER_CUBIC)
         return img
     
-    def stream_to_arduino(self):
-        sequence_array = self.get_sequence_array()
-        sec = 1 / self.fps
-        strand = NeoPixel('COM8')
-        fc = 0
-        led = 1
-        beginningOfTime = time.process_time()
-        start = time.process_time()
-        goAgainAt = start + sec
-        led_count = self.led_hor*2 + self.led_ver*2
-        
-        while True:
-            print("Loop #%d at time %f" % (fc, time.process_time() - beginningOfTime))
-            while led < (2*self.led_hor+2*self.led_ver):
-                strand.setPixelColor(led, sequence_array[fc][led][0], sequence_array[fc][led][1], sequence_array[fc][led][2])
-                # strand.show()
-                led += 1
-                if led >= led_count:
-                    led = 1
-                    break
-            fc += 1
-            if time.process_time() > goAgainAt:
-                print("Oops, missed an iteration")
-                goAgainAt += sec
-                continue
-            # Otherwise, wait for next interval
-            timeToSleep = goAgainAt - time.process_time()
-            goAgainAt += sec
-            time.sleep(timeToSleep)
-            print(f'time to sleep: {timeToSleep}')
 
-            if fc == len(sequence_array):
-                fc = 0
     
     def get_sequence_array(self):
         led_array_seq = []
         while True:
-            if self.frame_counter >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
-                self.frame_counter = self.clip_start_frame
-                self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            print(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
+            if self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.clip_end_frame-1:
+                # self.frame_counter = self.clip_start_frame
+                # self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
                 break
-            self.frame_counter += 1
             ret, video_frame = self.cap.read()
             # if mirrow == True:
             #     frame = cv2.flip(frame, 1) 
-            print(self.frame_counter)
             if ret == True:
                 # create led arrays and frame
                 led_arrays = self.generate_led_arrays(video_frame)
@@ -321,7 +270,7 @@ class VideoToLed():
                                       np.concatenate(led_arrays[3]),   
                                       np.concatenate(np.flipud(led_arrays[0]))])
             else: 
-                print(f'lost frame nr {self.frame_counter}')
+                print(f'Lost frame No {self.cap.get(cv2.CAP_PROP_POS_FRAMES)}')
                 continue
         return np.array(led_array_seq)
     
@@ -341,51 +290,89 @@ class VideoToLed():
         return True
         # with open(bin_file, "rb") as f:
         #     print(np.fromfile(f, dtype=np.uint8))
-        
-    def download_arduino_code(self):
-        print('download')
-        sequence_array = self.get_sequence_array()
-        index = 2
-        json_string = dumps(sequence_array, cls=NumpyArrayEncoder)
-        
-        ino_template_file = os.path.join('apps', 'static', 'assets', 'arduino_template.ino')
-        with open(ino_template_file, "r") as f:
-            contents = f.readlines()
-        
-        contents.insert(index, json_string)
 
-        return contents
-    
-class NumpyArrayEncoder(JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return JSONEncoder.default(self, obj)
-    
-class NeoPixel(object):
-    # from https://github.com/mdaffin/PyNeoPixel
-    def __init__(self, port):
-        self.port = port
-        self.ser = serial.Serial(self.port, 115200, timeout=60)
-        self.command_count = 0
-        
 
-    def setPixelColor(self, pixel, red, green, blue):
-        message = struct.pack('>HBBB', pixel, red, green, blue)
-        self.command_count += 1
-        if self.command_count >=255:
-            self.command_count = 0
-        #print(f'message: {message}')
-        self.ser.write(message)
-        #response = self.ser.readline()
-        #print(f'response: {response}')
-    
 
-    def show(self):
-        message = struct.pack('BBB', ord(':'), self.command_count, ord('s'))
-        self.command_count += 1
-        # print(message)
-        self.ser.write(message)
-        # response = self.ser.readline()
-        # print(response)
+
+
+    # def stream_to_arduino(self):
+    #     sequence_array = self.get_sequence_array()
+    #     sec = 1 / self.fps
+    #     strand = NeoPixel('COM8')
+    #     fc = 0
+    #     led = 1
+    #     beginningOfTime = time.process_time()
+    #     start = time.process_time()
+    #     goAgainAt = start + sec
+    #     led_count = self.led_hor*2 + self.led_ver*2
+    #
+    #     while True:
+    #         print("Loop #%d at time %f" % (fc, time.process_time() - beginningOfTime))
+    #         while led < (2*self.led_hor+2*self.led_ver):
+    #             strand.setPixelColor(led, sequence_array[fc][led][0], sequence_array[fc][led][1], sequence_array[fc][led][2])
+    #             # strand.show()
+    #             led += 1
+    #             if led >= led_count:
+    #                 led = 1
+    #                 break
+    #         fc += 1
+    #         if time.process_time() > goAgainAt:
+    #             print("Oops, missed an iteration")
+    #             goAgainAt += sec
+    #             continue
+    #         # Otherwise, wait for next interval
+    #         timeToSleep = goAgainAt - time.process_time()
+    #         goAgainAt += sec
+    #         time.sleep(timeToSleep)
+    #         print(f'time to sleep: {timeToSleep}')
+    #
+    #         if fc == len(sequence_array):
+    #             fc = 0        
+    # def download_arduino_code(self):
+    #     print('download')
+    #     sequence_array = self.get_sequence_array()
+    #     index = 2
+    #     json_string = dumps(sequence_array, cls=NumpyArrayEncoder)
+    #
+    #     ino_template_file = os.path.join('apps', 'static', 'assets', 'arduino_template.ino')
+    #     with open(ino_template_file, "r") as f:
+    #         contents = f.readlines()
+    #
+    #     contents.insert(index, json_string)
+    #
+    #     return contents
+    #
+
+# class NumpyArrayEncoder(JSONEncoder):
+#     def default(self, obj):
+#         if isinstance(obj, np.ndarray):
+#             return obj.tolist()
+#         return JSONEncoder.default(self, obj)
+#
+# class NeoPixel(object):
+#     # from https://github.com/mdaffin/PyNeoPixel
+#     def __init__(self, port):
+#         self.port = port
+#         self.ser = serial.Serial(self.port, 115200, timeout=60)
+#         self.command_count = 0
+#
+#
+#     def setPixelColor(self, pixel, red, green, blue):
+#         message = struct.pack('>HBBB', pixel, red, green, blue)
+#         self.command_count += 1
+#         if self.command_count >=255:
+#             self.command_count = 0
+#         #print(f'message: {message}')
+#         self.ser.write(message)
+#         #response = self.ser.readline()
+#         #print(f'response: {response}')
+#
+#
+#     def show(self):
+#         message = struct.pack('BBB', ord(':'), self.command_count, ord('s'))
+#         self.command_count += 1
+#         # print(message)
+#         self.ser.write(message)
+#         # response = self.ser.readline()
+#         # print(response)
 
