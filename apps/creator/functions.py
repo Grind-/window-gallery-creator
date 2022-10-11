@@ -9,6 +9,7 @@ import pafy
 import numpy as np
 from apps.util.youtube_downloader import YoutubeDownloader
 import os.path
+import hashlib
 from apps.creator.mqtt import MqttCore
 
 download_destination = 'apps/static/assets/.temp'
@@ -44,6 +45,7 @@ class VideoToLed():
         self.video_name = ''
         self.led_hor = 65
         self.led_ver = 85
+        self.hash = ''
         self.pause_flag = False
         self.record_flag = False
         
@@ -249,6 +251,7 @@ class VideoToLed():
     
     def get_sequence_array(self):
         led_array_seq = []
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
         while True:
             print(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
             if self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.clip_end_frame-2:
@@ -261,7 +264,6 @@ class VideoToLed():
             if ret == True:
                 # create led arrays and frame
                 led_arrays = self.generate_led_arrays(video_frame)
-                # led_arrays = [[[1,2,3],[4,5,6]], [[7,8,9],[10,11,12]], [[13,14,15],[16,17,18]], [[19,20,21],[22,23,24]]]
                 led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])), 
                                       np.concatenate(led_arrays[1]), 
                                       np.concatenate(led_arrays[3]),   
@@ -272,20 +274,37 @@ class VideoToLed():
         return np.array(led_array_seq)
     
     def send_over_mqtt(self, frame_id: str):
+        self.save_to_file(frame_id)
         print('send')
         mqtt_client = MqttCore()
         mqtt_client.start(config['topic_frame_connected'], None)
-        mqtt_client.publish(config['topic_sequence'], frame_id)
+        mqtt_client.publish(config['topic_sequence'], frame_id + '#' + self.hash)
         mqtt_client.stop(config['topic_frame_connected'])
         
     def save_to_file(self, frame_id: str):
+        
         sequence_array = self.get_sequence_array().astype(np.uint8)
         print(len(sequence_array)/(2*(self.led_hor + self.led_ver))/3)
         filename = frame_id + ".bin"
         bin_file = os.path.join('apps', 'sequences', filename)
-        with open(bin_file, "wb") as f:
-            f.write(sequence_array.tobytes())
-            f.close()
+        
+        h = hashlib.sha256()
+        h.update(sequence_array)
+        print(h.hexdigest())
+        with open(bin_file, "wb") as file:
+            file.write(sequence_array.tobytes())
+            file.close()
+        
+        h  = hashlib.sha256()
+        with open(bin_file, "rb", buffering=0) as file:    
+            while True:
+                chunk = file.read(h.block_size)
+                if not chunk:
+                    break
+                h.update(chunk)
+            file.close()
+        self.hash = f'{h.hexdigest()}'
+        print(self.hash)
         return True
 
 

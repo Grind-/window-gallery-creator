@@ -16,16 +16,16 @@ marshmallow
 marshmallow-sqlalchemy
 pafy
 youtube-dl==2020.12.2
-moviepy
+# moviepy
 dash
 dash_uploader
 dash_extensions
-pandas
+# pandas
 dash-bootstrap-components==0.13.1
 opencv-python-headless
 pytube
-scipy
-pyserial
+# scipy
+# pyserial
 authlib
-matplotlib
+# matplotlib
 paho-mqtt
