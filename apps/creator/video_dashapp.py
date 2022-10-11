@@ -15,8 +15,6 @@ from apps.creator.functions import VideoToLed
 import base64
 from distutils.dir_util import copy_tree
 
-
-
 APP_ID = 'windwow_gallery_creator'
 URL_BASE = '/dashapp/'
 MIN_HEIGHT = 600
