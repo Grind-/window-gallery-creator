@@ -22,7 +22,7 @@ MIN_HEIGHT = 600
 # copy subdirectory example
 from_directory = "apps/static/assets/videos"
 to_directory = "apps/static/assets/.temp"
-copy_tree(from_directory, to_directory)
+# copy_tree(from_directory, to_directory)
 
 video_to_led = VideoToLed()
 video_to_led.open_video_from_file(path=os.path.join('apps', 'static', 'assets', 'videos'), filename="color stripes.mp4")
@@ -55,7 +55,6 @@ def get_layout():
                     )
                 ),
             ]),
-        
             dbc.Col([
                 dbc.FormGroup([
                     dbc.Label('Rect Bottom (px)'),
@@ -63,48 +62,62 @@ def get_layout():
                                id=f'{APP_ID}_rect_bot_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False},
                                 value=4,),
-                ]),
-            dbc.FormGroup([
+                    ]),
+                dbc.FormGroup([
                     dbc.Label('Rect Top (px)'),
                     dcc.Slider(0, video_to_led.clip_height, 1, 
                                id=f'{APP_ID}_rect_top_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False},
                                 value=video_to_led.clip_height-4,),
-                ]), 
-            dbc.FormGroup([
+                    ]), 
+                dbc.FormGroup([
                     dbc.Label('Rect Left (px)'),
                     dcc.Slider(0, video_to_led.clip_width, 1, 
                                id=f'{APP_ID}_rect_left_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False},
                                 value=4,),
-                ]),   
-            dbc.FormGroup([
+                    ]),   
+                dbc.FormGroup([
                     dbc.Label('Rect Right (px)'),
                     dcc.Slider(0, video_to_led.clip_width, 1,
                                 id=f'{APP_ID}_rect_right_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False},
                                 value=video_to_led.clip_width-4),
-                ]),
-            dbc.FormGroup([
+                    ]),
+                dbc.FormGroup([
                     dbc.Label('Clip Start (sec)'),
                     dcc.Slider(0, video_to_led.clip_duration, 1, 
                                id=f'{APP_ID}_t_start_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False},
                                 value=0,),
-                ]),
-            dbc.FormGroup([
+                    ]),
+                dbc.FormGroup([
                     dbc.Label('Clip End (sec)'),
                     dcc.Slider(1, video_to_led.clip_duration, 1, 
                                id=f'{APP_ID}_t_end_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False}, 
                                 value=video_to_led.clip_duration),
-                ]),
-            dbc.FormGroup([
-                dbc.Label('Thickness (px)'),
-                dcc.Slider(0, 20, 1, id=f'{APP_ID}_thickness_input', marks=None, value=4,
-                            tooltip={"placement": "bottom", "always_visible": False}, 
-                            disabled=True),
-                ])
+                    ]),
+            ]),
+            dbc.Col([
+                dbc.FormGroup([
+                    dbc.Label('Thickness (px)'),
+                    dcc.Slider(0, 20, 1, id=f'{APP_ID}_thickness_input', marks=None, value=4,
+                                tooltip={"placement": "bottom", "always_visible": False}, 
+                                disabled=True),
+                    ]),
+                dbc.FormGroup([
+                    dbc.Label('Brightness'),
+                    dcc.Slider(-1, 1, 0.01, id=f'{APP_ID}_brightness_input', marks={'0':'0'}, 
+                                tooltip={"placement": "bottom", "always_visible": False},
+                                value=0,),
+                    ]),
+                dbc.FormGroup([
+                    dbc.Label('Contrast'),
+                    dcc.Slider(1, 10, 0.1, id=f'{APP_ID}_contrast_input', marks=None, 
+                                tooltip={"placement": "bottom", "always_visible": False},
+                                value=1,),
+                    ]),
             ]),
         ]),
         dbc.ButtonGroup([
@@ -158,9 +171,12 @@ def add_video_editing_dashboard(dash_app):
                 Input(f'{APP_ID}_rect_top_input', 'value'),
                 Input(f'{APP_ID}_rect_left_input', 'value'),
                 Input(f'{APP_ID}_rect_right_input', 'value'),
+                Input(f'{APP_ID}_brightness_input', 'value'),
+                Input(f'{APP_ID}_contrast_input', 'value'),
                 Input(f'{APP_ID}_video_filename', 'value')
             ])
-    def update_video(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right, video_filename):
+    def update_video(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right, 
+                     brightness, contrast, video_filename):
         rect_top = video_to_led.clip_height - rect_top
         rect_right = video_to_led.clip_width - rect_right
         
@@ -174,38 +190,38 @@ def add_video_editing_dashboard(dash_app):
         path_base64_string = path_base64_bytes.decode("ascii")
         filename_base64_bytes = base64.b64encode(filename_bytes)
         filename_base64_string = filename_base64_bytes.decode("ascii")
-        video_feed_url = f'{URL_BASE}video_feed/{path_base64_string}/{filename_base64_string}/{rect_bot}/{rect_top}/{rect_left}/{rect_right}/{clip_start}/{clip_end}/{thickness}'
+        video_feed_url = f'{URL_BASE}video_feed/{path_base64_string}/{filename_base64_string}/{rect_bot}/{rect_top}/{rect_left}/{rect_right}/{clip_start}/{clip_end}/{thickness}/{brightness}/{contrast}'
         if os.path.exists(os.path.join(path, filename)):
             return html.Img(src=video_feed_url, style={'width': '500px'})
         
-    @dash_app.callback(Output(f'{APP_ID}_send_sequence', 'disabled'),
-            [
-                State(f'{APP_ID}_thickness_input', 'value'),
-                State(f'{APP_ID}_large_upload_fn_store', 'data'),
-                State(f'{APP_ID}_t_start_input', 'value'),
-                State(f'{APP_ID}_t_end_input', 'value'),
-                State(f'{APP_ID}_rect_bot_input', 'value'),
-                State(f'{APP_ID}_rect_top_input', 'value'),
-                State(f'{APP_ID}_rect_left_input', 'value'),
-                State(f'{APP_ID}_rect_right_input', 'value'),
-                State(f'{APP_ID}_video_filename', 'value'),
-                State(f'{APP_ID}_frame_id', 'value'),
-                Input(f'{APP_ID}_create_sequence_button', 'n_clicks')
-            ])
-    def create_sequence_callback(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right, video_filename, frame_id, n_clicks):
-        if n_clicks:
-            rect_top = video_to_led.clip_height - rect_top
-            rect_right = video_to_led.clip_width - rect_right
-            path = os.path.join('apps', 'static', 'assets', '.temp')
-            filename = "color stripes.mp4"
-            if video_filename:
-                filename = video_filename
-            video_for_download = VideoToLed()
-            video_for_download.open_video_from_file(path, filename)
-            video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
-            video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
-            status = video_for_download.save_to_file(frame_id)
-            return not status
+    # @dash_app.callback(Output(f'{APP_ID}_send_sequence', 'disabled'),
+    #         [
+    #             State(f'{APP_ID}_thickness_input', 'value'),
+    #             State(f'{APP_ID}_large_upload_fn_store', 'data'),
+    #             State(f'{APP_ID}_t_start_input', 'value'),
+    #             State(f'{APP_ID}_t_end_input', 'value'),
+    #             State(f'{APP_ID}_rect_bot_input', 'value'),
+    #             State(f'{APP_ID}_rect_top_input', 'value'),
+    #             State(f'{APP_ID}_rect_left_input', 'value'),
+    #             State(f'{APP_ID}_rect_right_input', 'value'),
+    #             State(f'{APP_ID}_video_filename', 'value'),
+    #             State(f'{APP_ID}_frame_id', 'value'),
+    #             Input(f'{APP_ID}_create_sequence_button', 'n_clicks')
+    #         ])
+    # def create_sequence_callback(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right, video_filename, frame_id, n_clicks):
+    #     if n_clicks:
+    #         rect_top = video_to_led.clip_height - rect_top
+    #         rect_right = video_to_led.clip_width - rect_right
+    #         path = os.path.join('apps', 'static', 'assets', '.temp')
+    #         filename = "color stripes.mp4"
+    #         if video_filename:
+    #             filename = video_filename
+    #         video_for_download = VideoToLed()
+    #         video_for_download.open_video_from_file(path, filename)
+    #         video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
+    #         video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
+    #         status = video_for_download.save_to_file(frame_id)
+    #         return not status
     
     @dash_app.callback(Output(f'{APP_ID}_status', 'data'),
             [
@@ -219,9 +235,12 @@ def add_video_editing_dashboard(dash_app):
                 State(f'{APP_ID}_rect_right_input', 'value'),
                 State(f'{APP_ID}_video_filename', 'value'),
                 State(f'{APP_ID}_frame_id', 'value'),
+                State(f'{APP_ID}_brightness_input', 'value'),
+                State(f'{APP_ID}_contrast_input', 'value'),
                 Input(f'{APP_ID}_send_sequence', 'n_clicks')
             ])
-    def send_to_frame(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right, video_filename, frame_id, n_clicks):
+    def send_to_frame(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, 
+                      rect_right, video_filename, frame_id, brightness, contrast, n_clicks):
         if n_clicks:
             rect_top = video_to_led.clip_height - rect_top
             rect_right = video_to_led.clip_width - rect_right
@@ -233,6 +252,7 @@ def add_video_editing_dashboard(dash_app):
             video_for_download.open_video_from_file(path, filename)
             video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
             video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
+            video_for_download.set_brightness_contrast(int(brightness), int(float(contrast)))
             return video_for_download.send_over_mqtt(frame_id)
         
     @dash_app.callback(Output(f'{APP_ID}_video_filename', 'value'),
@@ -246,8 +266,8 @@ def add_video_editing_dashboard(dash_app):
         return payload
     
         
-    @dash_app.server.route(f'{URL_BASE}video_feed/<string:path_encoded>/<string:filename_encoded>/<rect_bot>/<rect_top>/<rect_left>/<rect_right>/<t_start>/<t_end>/<thickness>')
-    def video_feed(path_encoded, filename_encoded, rect_bot, rect_top, rect_left, rect_right, t_start, t_end, thickness):
+    @dash_app.server.route(f'{URL_BASE}video_feed/<string:path_encoded>/<string:filename_encoded>/<rect_bot>/<rect_top>/<rect_left>/<rect_right>/<t_start>/<t_end>/<thickness>/<brightness>/<contrast>')
+    def video_feed(path_encoded, filename_encoded, rect_bot, rect_top, rect_left, rect_right, t_start, t_end, thickness,brightness, contrast):
         path_base64_bytes = path_encoded.encode("ascii")
         path_base64_bytes = base64.b64decode(path_base64_bytes)
         path_decoded = path_base64_bytes.decode("ascii")
@@ -258,6 +278,7 @@ def add_video_editing_dashboard(dash_app):
         video_to_led_feed.open_video_from_file(path_decoded, filename_decoded)
         video_to_led_feed.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
         video_to_led_feed.set_start_end_sec(int(t_start), int(float(t_end)))
+        video_to_led_feed.set_brightness_contrast(float(brightness), int(float(contrast)))
         if video_to_led_feed.is_playing:
             video_to_led_feed.restart()
         return Response(video_to_led_feed.start(),

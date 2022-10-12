@@ -11,6 +11,7 @@ from apps.util.youtube_downloader import YoutubeDownloader
 import os.path
 import hashlib
 from apps.creator.mqtt import MqttCore
+from apps.util.video_utils import set_brightness
 
 download_destination = 'apps/static/assets/.temp'
 (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
@@ -45,8 +46,9 @@ class VideoToLed():
         self.video_name = ''
         self.led_hor = 65
         self.led_ver = 85
-        self.threshold = 20
         self.hash = ''
+        self.brightness = 0
+        self.contrast = 0
         self.pause_flag = False
         self.record_flag = False
         
@@ -56,7 +58,7 @@ class VideoToLed():
     def load_youtube_video(self, url: str):
         video = pafy.new(url)
         video_length = video.length
-        if video_length > 300:
+        if video_length > 12000:
             return 'video is too long, choose one with less than 5 minutes'
         downloader = YoutubeDownloader()
         downloader.choose_destination(download_destination)
@@ -117,6 +119,11 @@ class VideoToLed():
         # ffmpeg_extract_subclip(download_destination+'/'+self.video_name, self.clip_start_frame/self.fps, 
         #                        self.clip_end_frame/self.fps, targetname=download_destination+'/cut'+self.video_name)
         # self.open_video_from_file(download_destination, 'cut'+self.video_name)
+        
+    def set_brightness_contrast(self, brightness: int, contrast: int):
+        self.brightness = brightness
+        self.contrast = contrast
+        
     
     def start(self):
         print('start')
@@ -136,7 +143,10 @@ class VideoToLed():
                 
                 
                 if ret == True:
-                    video_frame = cv2.threshold(video_frame,self.threshold,255,cv2.THRESH_TOZERO)[1]
+                    # adjust contrast and brightness
+                    video_frame = cv2.convertScaleAbs(video_frame, alpha=self.contrast)
+                    video_frame = set_brightness(video_frame, self.brightness)
+                    
                     # create led arrays and frame
                     led_arrays = self.generate_led_arrays(video_frame)
                     led_frame = self.generate_led_frame_image(led_arrays)
@@ -152,7 +162,7 @@ class VideoToLed():
                     overlay = cv2.rectangle(overlay, rect_start_point, rect_end_point, color, rect_thickness)
                     video_frame = cv2.addWeighted(overlay, alpha, video_frame, 1 - alpha, 0)
                     
-                    # stacking both frames
+                    # stacking all frames
                     frame = np.vstack((video_frame, led_frame, led_linear))
                     
                     # transform to jpeg
@@ -264,8 +274,8 @@ class VideoToLed():
             # if mirrow == True:
             #     frame = cv2.flip(frame, 1) 
             if ret == True:
-                video_frame = cv2.threshold(video_frame,self.threshold,255,cv2.THRESH_TOZERO)[1]
                 # create led arrays and frame
+                video_frame = cv2.convertScaleAbs(video_frame, alpha=self.contrast)
                 led_arrays = self.generate_led_arrays(video_frame)
                 led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])),
                                       np.concatenate(led_arrays[1]),
