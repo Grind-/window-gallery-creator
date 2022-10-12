@@ -45,6 +45,7 @@ class VideoToLed():
         self.video_name = ''
         self.led_hor = 65
         self.led_ver = 85
+        self.threshold = 20
         self.hash = ''
         self.pause_flag = False
         self.record_flag = False
@@ -133,8 +134,9 @@ class VideoToLed():
                 time.sleep(1/self.fps)
                 ret, video_frame = self.cap.read()
                 
+                
                 if ret == True:
-                    
+                    video_frame = cv2.threshold(video_frame,self.threshold,255,cv2.THRESH_TOZERO)[1]
                     # create led arrays and frame
                     led_arrays = self.generate_led_arrays(video_frame)
                     led_frame = self.generate_led_frame_image(led_arrays)
@@ -262,6 +264,7 @@ class VideoToLed():
             # if mirrow == True:
             #     frame = cv2.flip(frame, 1) 
             if ret == True:
+                video_frame = cv2.threshold(video_frame,self.threshold,255,cv2.THRESH_TOZERO)[1]
                 # create led arrays and frame
                 led_arrays = self.generate_led_arrays(video_frame)
                 led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])),
