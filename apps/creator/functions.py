@@ -276,6 +276,7 @@ class VideoToLed():
             if ret == True:
                 # create led arrays and frame
                 video_frame = cv2.convertScaleAbs(video_frame, alpha=self.contrast)
+                video_frame = set_brightness(video_frame, self.brightness)
                 led_arrays = self.generate_led_arrays(video_frame)
                 led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])),
                                       np.concatenate(led_arrays[1]),
