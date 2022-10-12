@@ -254,7 +254,7 @@ class VideoToLed():
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
         while True:
             # print(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
-            if self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.frame_count-1:
+            if self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.clip_end_frame-1:
                 # self.frame_counter = self.clip_start_frame
                 # self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
                 break
@@ -304,7 +304,7 @@ class VideoToLed():
                 h.update(chunk)
             file.close()
         self.hash = f'{h.hexdigest()}'
-        print(self.hash)
+        print('saved file hash: ' + self.hash)
         return True
 
 
