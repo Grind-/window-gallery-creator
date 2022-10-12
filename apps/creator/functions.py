@@ -253,7 +253,7 @@ class VideoToLed():
         led_array_seq = []
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
         while True:
-            //print(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
+            #print(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
             if self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.clip_end_frame-2:
                 # self.frame_counter = self.clip_start_frame
                 # self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
