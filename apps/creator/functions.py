@@ -253,8 +253,8 @@ class VideoToLed():
         led_array_seq = []
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
         while True:
-            #print(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
-            if self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.clip_end_frame-2:
+            # print(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
+            if self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.frame_count-1:
                 # self.frame_counter = self.clip_start_frame
                 # self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
                 break
@@ -264,13 +264,13 @@ class VideoToLed():
             if ret == True:
                 # create led arrays and frame
                 led_arrays = self.generate_led_arrays(video_frame)
-                led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])), 
-                                      np.concatenate(led_arrays[1]), 
-                                      np.concatenate(led_arrays[3]),   
+                led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])),
+                                      np.concatenate(led_arrays[1]),
+                                      np.concatenate(led_arrays[3]),
                                       np.concatenate(np.flipud(led_arrays[0]))])
             else: 
                 print(f'Lost frame No {self.cap.get(cv2.CAP_PROP_POS_FRAMES)}')
-                continue
+                break
         return np.array(led_array_seq)
     
     def send_over_mqtt(self, frame_id: str):
