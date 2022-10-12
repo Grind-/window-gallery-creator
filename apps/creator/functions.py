@@ -264,10 +264,6 @@ class VideoToLed():
             if ret == True:
                 # create led arrays and frame
                 led_arrays = self.generate_led_arrays(video_frame)
-                led_arrays_ordered = [np.concatenate(np.flipud(led_arrays[2])), 
-                                      np.concatenate(led_arrays[1]), 
-                                      np.concatenate(led_arrays[3]),   
-                                      np.concatenate(np.flipud(led_arrays[0]))]
                 led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])), 
                                       np.concatenate(led_arrays[1]), 
                                       np.concatenate(led_arrays[3]),   
