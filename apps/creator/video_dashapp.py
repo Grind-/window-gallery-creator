@@ -30,19 +30,44 @@ youtube_url='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler'
         
 def get_layout():
     layout = dbc.Container([
-
         dbc.Row([
-            dbc.Label('Paste a Youtube Link here and press load (max 5 min):  ',),
-            ], style={"margin-top":"50px", "margin":"20px 0px"}),
-        dbc.Row([dcc.Input(id=f'{APP_ID}_youtube_url', type='url', 
-                          placeholder='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler',
-                          debounce=True, style={"width": "300px"}),
-                dbc.Button('load', id=f'{APP_ID}_youtube_load_button', color='primary', 
-                           disabled=False, n_clicks=0),], style={"margin":"20px 0px"}),
-        dbc.Row([html.P(id=f'{APP_ID}_video_filename'),]),
-        dbc.Label('or drag and drop a video file here'),
-        dcc.Store(id=f'{APP_ID}_large_upload_fn_store'),
-        du.Upload(id=f'{APP_ID}_large_upload', max_file_size=5120),
+            dbc.Col([
+                dbc.Row([
+                    dbc.Label('Paste a Youtube Link here and press load (max 5 min):  ',),
+                    ], style={"margin-top":"50px", "margin":"20px 0px"}),
+                dbc.Row([dcc.Input(id=f'{APP_ID}_youtube_url', type='url', 
+                                  placeholder='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler',
+                                  debounce=True, style={"width": "300px"}),
+                        dbc.Button('load', id=f'{APP_ID}_youtube_load_button', color='primary', 
+                                   disabled=False, n_clicks=0),], 
+                        style={"margin":"20px 0px"}),
+            ]), 
+            dbc.Col([
+                dbc.Row([dbc.Label('or drag and drop a video file here')], style={"margin-top":"50px", "margin":"20px 0px"}),
+                dbc.Row(
+                    [  
+                        dcc.Store(id=f'{APP_ID}_large_upload_fn_store'),
+                         du.Upload(id=f'{APP_ID}_large_upload', max_file_size=5120, default_style={
+                            'minHeight': 1,
+                            'lineHeight': 1
+                            # 'width': '80%',
+                            # 'height': '50%',
+                            # 'border': 'none',
+                            # 'textAlign': 'center',
+                            # 'background': "#ea8f32",
+                            # 'color': 'white',
+                            # 'outlineColor': '#ea8f32',
+                            # 'font-family': 'Avenir',
+                            # 'font-size': '10px',
+                            # 'font-weight': '150',
+                            # 'border-radius': '10px'
+                        },),
+                    ],
+                    style={"margin":"20px 0px"}
+                ),
+            dbc.Row([html.P(id=f'{APP_ID}_video_filename')]),
+            ]),
+        ]),
         dbc.Row([
 
         ]), 
@@ -118,15 +143,16 @@ def get_layout():
                                 tooltip={"placement": "bottom", "always_visible": False},
                                 value=1,),
                     ]),
+                dbc.ButtonGroup([
+                    dcc.Input(id=f'{APP_ID}_frame_id', type='url', 
+                                  placeholder='frame id here',
+                                  debounce=True),
+                    dbc.Button('Send', id=f'{APP_ID}_send_sequence', color='primary', disabled=True),
+                ]),
             ]),
+            
         ]),
-        dbc.ButtonGroup([
-            dcc.Download(id=f"{APP_ID}_download_sequence_file"),
-            dcc.Input(id=f'{APP_ID}_frame_id', type='url', 
-                          placeholder='frame id here',
-                          debounce=True, style={"width": "300px"}),
-            dbc.Button('Send Sequence', id=f'{APP_ID}_send_sequence', color='primary', disabled=True),
-        ]),
+        
     ])
     return layout
 
@@ -293,7 +319,7 @@ def add_video_editing_dashboard(dash_app):
     Output(f'{APP_ID}_send_sequence','disabled'),
     [Input(f'{APP_ID}_frame_id','value')])
     def activate_button(frame_id):
-        if len(frame_id) > 10:
+        if frame_id and len(frame_id) > 10:
             return False
 
     return dash_app   
