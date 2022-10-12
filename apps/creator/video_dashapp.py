@@ -22,7 +22,7 @@ MIN_HEIGHT = 600
 # copy subdirectory example
 from_directory = "apps/static/assets/videos"
 to_directory = "apps/static/assets/.temp"
-# copy_tree(from_directory, to_directory)
+copy_tree(from_directory, to_directory)
 
 video_to_led = VideoToLed()
 video_to_led.open_video_from_file(path=os.path.join('apps', 'static', 'assets', 'videos'), filename="color stripes.mp4")
@@ -121,9 +121,6 @@ def get_layout():
             ]),
         ]),
         dbc.ButtonGroup([
-            # dbc.Button('Record', id=f'{APP_ID}_record_button', color='primary', disabled=False),
-            # dbc.Button('Stop Record', id=f'{APP_ID}_stop_record_button', color='primary', disabled=False),
-            dbc.Button('Create Sequence', id=f'{APP_ID}_create_sequence_button', color='primary', disabled=False),
             dcc.Download(id=f"{APP_ID}_download_sequence_file"),
             dcc.Input(id=f'{APP_ID}_frame_id', type='url', 
                           placeholder='frame id here',
@@ -290,10 +287,17 @@ def add_video_editing_dashboard(dash_app):
         return send_from_directory(
             Path("downloads"), path, as_attachment=True
         )
-
+        
+        
+    @dash_app.callback(
+    Output(f'{APP_ID}_send_sequence','disabled'),
+    [Input(f'{APP_ID}_frame_id','value')])
+    def activate_button(frame_id):
+        if len(frame_id) > 10:
+            return False
 
     return dash_app   
-
+    
 
 
 def init_dash(server):
