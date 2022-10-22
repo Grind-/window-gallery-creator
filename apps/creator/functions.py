@@ -208,6 +208,10 @@ class VideoToLed():
         resized_ver = np.array(cv2.resize(frame, 
                                           dsize=(int(self.clip_width/self.rect_thickness), self.led_ver), 
                                           interpolation=cv2.INTER_CUBIC))
+        
+        
+        resized_hor[resized_hor < 5] = 0
+        resized_ver[resized_ver < 5] = 0
 
         line_top = resized_hor[-1, :]
         line_bot = resized_hor[0, :]
