@@ -51,6 +51,7 @@ class VideoToLed():
         self.contrast = 0
         self.pause_flag = False
         self.record_flag = False
+        self.black = 0
         
     def get_clip_duration(self):
         return self.clip_duration        
@@ -120,9 +121,10 @@ class VideoToLed():
         #                        self.clip_end_frame/self.fps, targetname=download_destination+'/cut'+self.video_name)
         # self.open_video_from_file(download_destination, 'cut'+self.video_name)
         
-    def set_brightness_contrast(self, brightness: int, contrast: int):
+    def set_brightness_contrast(self, brightness: int, contrast: int, black: int):
         self.brightness = brightness
         self.contrast = contrast
+        self.black = black
         
     
     def start(self):
@@ -210,8 +212,8 @@ class VideoToLed():
                                           interpolation=cv2.INTER_CUBIC))
         
         
-        resized_hor[resized_hor < 5] = 0
-        resized_ver[resized_ver < 5] = 0
+        resized_hor[resized_hor < self.black] = 0
+        resized_ver[resized_ver < self.black] = 0
 
         line_top = resized_hor[-1, :]
         line_bot = resized_hor[0, :]

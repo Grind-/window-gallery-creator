@@ -143,6 +143,11 @@ def get_layout():
                                 tooltip={"placement": "bottom", "always_visible": False},
                                 value=1,),
                     ]),
+                dbc.FormGroup([
+                    dbc.Label('Black (low)'),
+                    dcc.Slider(0, 255, 1, id=f'{APP_ID}_black_input', marks=None, value=5,
+                                tooltip={"placement": "bottom", "always_visible": False}),
+                    ]),
                 dbc.ButtonGroup([
                     dcc.Input(id=f'{APP_ID}_frame_id', type='url', 
                                   placeholder='frame id here',
@@ -196,10 +201,11 @@ def add_video_editing_dashboard(dash_app):
                 Input(f'{APP_ID}_rect_right_input', 'value'),
                 Input(f'{APP_ID}_brightness_input', 'value'),
                 Input(f'{APP_ID}_contrast_input', 'value'),
+                Input(f'{APP_ID}_black_input', 'value'),
                 Input(f'{APP_ID}_video_filename', 'value')
             ])
     def update_video(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, rect_right, 
-                     brightness, contrast, video_filename):
+                     brightness, contrast, black, video_filename):
         rect_top = video_to_led.clip_height - rect_top
         rect_right = video_to_led.clip_width - rect_right
         
@@ -213,7 +219,7 @@ def add_video_editing_dashboard(dash_app):
         path_base64_string = path_base64_bytes.decode("ascii")
         filename_base64_bytes = base64.b64encode(filename_bytes)
         filename_base64_string = filename_base64_bytes.decode("ascii")
-        video_feed_url = f'{URL_BASE}video_feed/{path_base64_string}/{filename_base64_string}/{rect_bot}/{rect_top}/{rect_left}/{rect_right}/{clip_start}/{clip_end}/{thickness}/{brightness}/{contrast}'
+        video_feed_url = f'{URL_BASE}video_feed/{path_base64_string}/{filename_base64_string}/{rect_bot}/{rect_top}/{rect_left}/{rect_right}/{clip_start}/{clip_end}/{thickness}/{brightness}/{contrast}/{black}'
         if os.path.exists(os.path.join(path, filename)):
             return html.Img(src=video_feed_url, style={'width': '500px'})
         
@@ -260,10 +266,11 @@ def add_video_editing_dashboard(dash_app):
                 State(f'{APP_ID}_frame_id', 'value'),
                 State(f'{APP_ID}_brightness_input', 'value'),
                 State(f'{APP_ID}_contrast_input', 'value'),
+                Input(f'{APP_ID}_black_input', 'value'),
                 Input(f'{APP_ID}_send_sequence', 'n_clicks')
             ])
     def send_to_frame(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, 
-                      rect_right, video_filename, frame_id, brightness, contrast, n_clicks):
+                      rect_right, video_filename, frame_id, brightness, contrast, black,  n_clicks):
         if n_clicks:
             rect_top = video_to_led.clip_height - rect_top
             rect_right = video_to_led.clip_width - rect_right
@@ -275,7 +282,7 @@ def add_video_editing_dashboard(dash_app):
             video_for_download.open_video_from_file(path, filename)
             video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
             video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
-            video_for_download.set_brightness_contrast(int(brightness), int(float(contrast)))
+            video_for_download.set_brightness_contrast(int(brightness), int(float(contrast)), int(float(black)))
             return video_for_download.send_over_mqtt(frame_id)
         
     @dash_app.callback(Output(f'{APP_ID}_video_filename', 'value'),
@@ -289,8 +296,8 @@ def add_video_editing_dashboard(dash_app):
         return payload
     
         
-    @dash_app.server.route(f'{URL_BASE}video_feed/<string:path_encoded>/<string:filename_encoded>/<rect_bot>/<rect_top>/<rect_left>/<rect_right>/<t_start>/<t_end>/<thickness>/<brightness>/<contrast>')
-    def video_feed(path_encoded, filename_encoded, rect_bot, rect_top, rect_left, rect_right, t_start, t_end, thickness,brightness, contrast):
+    @dash_app.server.route(f'{URL_BASE}video_feed/<string:path_encoded>/<string:filename_encoded>/<rect_bot>/<rect_top>/<rect_left>/<rect_right>/<t_start>/<t_end>/<thickness>/<brightness>/<contrast>/<black>')
+    def video_feed(path_encoded, filename_encoded, rect_bot, rect_top, rect_left, rect_right, t_start, t_end, thickness,brightness, contrast, black):
         path_base64_bytes = path_encoded.encode("ascii")
         path_base64_bytes = base64.b64decode(path_base64_bytes)
         path_decoded = path_base64_bytes.decode("ascii")
@@ -301,7 +308,7 @@ def add_video_editing_dashboard(dash_app):
         video_to_led_feed.open_video_from_file(path_decoded, filename_decoded)
         video_to_led_feed.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
         video_to_led_feed.set_start_end_sec(int(t_start), int(float(t_end)))
-        video_to_led_feed.set_brightness_contrast(float(brightness), int(float(contrast)))
+        video_to_led_feed.set_brightness_contrast(float(brightness), int(float(contrast)), int(float(black)))
         if video_to_led_feed.is_playing:
             video_to_led_feed.restart()
         return Response(video_to_led_feed.start(),
