@@ -1,5 +1,5 @@
 from flask import Flask, send_from_directory, Response
-from dash import dcc, ctx
+from dash import dcc, ctx, MATCH
 from dash import html
 import dash_bootstrap_components as dbc
 import dash_uploader as du
@@ -11,7 +11,7 @@ from dash.dependencies import Output, Input
 from pathlib import Path
 
 import moviepy.editor as mpy
-from apps.creator.functions import VideoToLed
+from apps.creator.functions import VideoToLed, FileUtils
 import base64
 from distutils.dir_util import copy_tree
 
@@ -19,13 +19,16 @@ APP_ID = 'windwow_gallery_creator'
 URL_BASE = '/dashapp/'
 MIN_HEIGHT = 600
 
+username = 'TestUser'
+file_utils = FileUtils(username)
+
 # copy subdirectory example
 from_directory = "apps/static/assets/videos"
 to_directory = "apps/static/assets/.temp"
 copy_tree(from_directory, to_directory)
 
-video_to_led = VideoToLed()
-video_to_led.open_video_from_file(path=os.path.join('apps', 'static', 'assets', 'videos'), filename="color stripes.mp4")
+video_to_led = VideoToLed(username)
+video_to_led.open_video_from_file(filepath=os.path.join('apps', 'static', 'assets', 'videos'), filename="color stripes.mp4")
 youtube_url='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler' 
         
 def get_layout():
@@ -76,7 +79,7 @@ def get_layout():
             dbc.Col([
                 dcc.Loading(
                     html.Div(
-                        html.Div(id=f'{APP_ID}_udate_video')
+                        html.Div(id=f'{APP_ID}_update_video')
                     )
                 ),
             ]),
@@ -149,20 +152,60 @@ def get_layout():
                                 tooltip={"placement": "bottom", "always_visible": False}),
                     ]),
                 dbc.ButtonGroup([
-                    dcc.Input(id=f'{APP_ID}_frame_id', type='url', 
-                                  placeholder='frame id here',
+                    dcc.Input(id=f'{APP_ID}_frame_id', type='text', 
+                                  placeholder='Frame ID',
                                   debounce=True),
                     dbc.Button('Send', id=f'{APP_ID}_send_sequence', color='primary', disabled=True),
                 ]),
+                dbc.ButtonGroup([
+                    dcc.Input(id=f'{APP_ID}_sequence_name', type='text', 
+                                  placeholder='Sequence name',
+                                  debounce=True),
+                    dbc.Button('Save', id=f'{APP_ID}_save_sequence', color='primary', disabled=True),
+                ]),
+                html.H4(id=f'{APP_ID}_status', children='')
             ]),
             
         ]),
+        dbc.Row([
+            dbc.Col([
+                html.Div(id=f'{APP_ID}_live_update_sequences')
+                ])
+            ]),
+        dcc.Interval(
+            id='interval-component',
+            interval=1*1000, # in milliseconds
+            n_intervals=0
+        )
         
     ])
+    
     return layout
 
-
+def generate_available_sequence(sequence_name: str):
+    
+        return dbc.Row([
+                    dbc.ButtonGroup([
+                        html.P(str(sequence_name), style={"width": "300px"}),
+                        dbc.Button(children='Send',
+                            color="primary",
+                            className="mr-1",
+                            id={"type": "send_button", "index": str(sequence_name)}),
+                        dbc.Button(children='Delete',
+                            color="primary",
+                            className="mr-1",
+                            id={"type": "delete_button", "index": str(sequence_name)})
+                    ], style={"margin-left": "50px"})
+                ])
+                    
 def add_video_editing_dashboard(dash_app):
+    
+    @dash_app.callback(Output(f'{APP_ID}_live_update_sequences', 'children'),
+              Input('interval-component', 'n_intervals'))
+    def update_available_sequences(n):
+        return [dbc.Col([
+                    generate_available_sequence(i) for i in file_utils.list_movies()
+                    ])]
 
     @du.callback(
         output=Output(f'{APP_ID}_large_upload_fn_store', 'data'),
@@ -174,7 +217,7 @@ def add_video_editing_dashboard(dash_app):
 
     @dash_app.callback(
         [
-            Output(f'{APP_ID}_status', 'data')
+            Output(f'{APP_ID}_status', 'children')
         ],
         [
             Input(f'{APP_ID}_large_upload_fn_store', 'data'),
@@ -185,11 +228,34 @@ def add_video_editing_dashboard(dash_app):
             return True, 0., None, None
 
         clip = mpy.VideoFileClip(dic_of_names[list(dic_of_names)[0]])
-
         return ''
     
     
-    @dash_app.callback(Output(f'{APP_ID}_udate_video', 'children'),
+    @dash_app.callback(
+        Output({"type": "delete_button", "index": MATCH}, "children"),
+        Input({"type": "delete_button", "index": MATCH}, "n_clicks"),
+        State({"type": "delete_button", "index": MATCH}, "id"),
+    )
+    def delete_saved_sequence(n_clicks, id):
+        if n_clicks:
+            sequence_filename = id['index']
+            file_utils.delete_sequence(sequence_filename)
+        return 'Delete'
+    
+    @dash_app.callback(
+        Output({"type": "send_button", "index": MATCH}, "children"),
+        Input({"type": "send_button", "index": MATCH}, "n_clicks"),
+        State({"type": "send_button", "index": MATCH}, "id"),
+        State(f'{APP_ID}_frame_id', 'value'),
+    )       
+    def send_saved_sequence(n_clicks, id: str, frame_id: str):
+        if n_clicks:
+            sequence_filename = id['index']
+            file_utils.send_saved_sequence(sequence_filename, frame_id)
+        return 'Send'
+    
+    
+    @dash_app.callback(Output(f'{APP_ID}_update_video', 'children'),
             [
                 Input(f'{APP_ID}_thickness_input', 'value'),
                 Input(f'{APP_ID}_large_upload_fn_store', 'data'),
@@ -245,14 +311,14 @@ def add_video_editing_dashboard(dash_app):
     #         filename = "color stripes.mp4"
     #         if video_filename:
     #             filename = video_filename
-    #         video_for_download = VideoToLed()
+    #         video_for_download = VideoToLed(username)
     #         video_for_download.open_video_from_file(path, filename)
     #         video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
     #         video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
     #         status = video_for_download.save_to_file(frame_id)
     #         return not status
     
-    @dash_app.callback(Output(f'{APP_ID}_status', 'data'),
+    @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
             [
                 State(f'{APP_ID}_thickness_input', 'value'),
                 State(f'{APP_ID}_large_upload_fn_store', 'data'),
@@ -272,18 +338,57 @@ def add_video_editing_dashboard(dash_app):
     def send_to_frame(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, 
                       rect_right, video_filename, frame_id, brightness, contrast, black,  n_clicks):
         if n_clicks:
+            if clip_end-clip_start > 30:
+                return 'Video too long, maximum of 30 sec'
+            if not frame_id:
+                return 'Please enter Frame ID'
             rect_top = video_to_led.clip_height - rect_top
             rect_right = video_to_led.clip_width - rect_right
             path = os.path.join('apps', 'static', 'assets', '.temp')
             filename = "color stripes.mp4"
             if video_filename:
                 filename = video_filename
-            video_for_download = VideoToLed()
+            video_for_download = VideoToLed(username)
             video_for_download.open_video_from_file(path, filename)
             video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
             video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
             video_for_download.set_brightness_contrast(int(brightness), int(float(contrast)), int(float(black)))
             return video_for_download.send_over_mqtt(frame_id)
+        
+    @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
+            [
+                State(f'{APP_ID}_thickness_input', 'value'),
+                State(f'{APP_ID}_large_upload_fn_store', 'data'),
+                State(f'{APP_ID}_t_start_input', 'value'),
+                State(f'{APP_ID}_t_end_input', 'value'),
+                State(f'{APP_ID}_rect_bot_input', 'value'),
+                State(f'{APP_ID}_rect_top_input', 'value'),
+                State(f'{APP_ID}_rect_left_input', 'value'),
+                State(f'{APP_ID}_rect_right_input', 'value'),
+                State(f'{APP_ID}_video_filename', 'value'),
+                State(f'{APP_ID}_sequence_name', 'value'),
+                State(f'{APP_ID}_brightness_input', 'value'),
+                State(f'{APP_ID}_contrast_input', 'value'),
+                Input(f'{APP_ID}_black_input', 'value'),
+                Input(f'{APP_ID}_save_sequence', 'n_clicks')
+            ])
+    def save_sequence(thickness, dic_of_names, clip_start, clip_end, rect_bot, rect_top, rect_left, 
+                      rect_right, video_filename, sequence_name, brightness, contrast, black,  n_clicks):
+        if n_clicks:
+            if clip_end-clip_start > 30:
+                return 'Video too long, maximum of 30 sec'
+            rect_top = video_to_led.clip_height - rect_top
+            rect_right = video_to_led.clip_width - rect_right
+            path = os.path.join('apps', 'static', 'assets', '.temp')
+            filename = "color stripes.mp4"
+            if video_filename:
+                filename = video_filename
+            video_for_download = VideoToLed(username)
+            video_for_download.open_video_from_file(path, filename)
+            video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
+            video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
+            video_for_download.set_brightness_contrast(int(brightness), int(float(contrast)), int(float(black)))
+            return video_for_download.save_sequence(sequence_name)
         
     @dash_app.callback(Output(f'{APP_ID}_video_filename', 'value'),
                 Input(f'{APP_ID}_youtube_load_button', 'n_clicks'),
@@ -304,7 +409,7 @@ def add_video_editing_dashboard(dash_app):
         filename_base64_bytes = filename_encoded.encode("ascii")
         filename_base64_bytes = base64.b64decode(filename_base64_bytes)
         filename_decoded = filename_base64_bytes.decode("ascii")
-        video_to_led_feed = VideoToLed()
+        video_to_led_feed = VideoToLed(username)
         video_to_led_feed.open_video_from_file(path_decoded, filename_decoded)
         video_to_led_feed.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
         video_to_led_feed.set_start_end_sec(int(t_start), int(float(t_end)))
@@ -325,8 +430,15 @@ def add_video_editing_dashboard(dash_app):
     @dash_app.callback(
     Output(f'{APP_ID}_send_sequence','disabled'),
     [Input(f'{APP_ID}_frame_id','value')])
-    def activate_button(frame_id):
-        if frame_id and len(frame_id) > 10:
+    def activate_send_button(frame_id):
+        if frame_id and len(frame_id) > 4:
+            return False
+        
+    @dash_app.callback(
+    Output(f'{APP_ID}_save_sequence','disabled'),
+    [Input(f'{APP_ID}_sequence_name','value')])
+    def activate_save_button(sequence_name):
+        if sequence_name and len(sequence_name) > 0:
             return False
 
     return dash_app   

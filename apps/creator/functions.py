@@ -8,24 +8,25 @@ import cv2
 import pafy
 import numpy as np
 from apps.util.youtube_downloader import YoutubeDownloader
-import os.path
 import hashlib
 from apps.creator.mqtt import MqttCore
 from apps.util.video_utils import set_brightness
+from os import listdir, makedirs, path, remove
 
 download_destination = 'apps/static/assets/.temp'
 (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
 
 config = {}
 config['frame_id'] = '0000001'
-config['topic_sequence'] = '/sequence/' + config['frame_id']
+config['topic_sequence'] = '/sequence/'#  + config['frame_id']
 config['topic_frame_connected'] = '/frame_connected/'
 config['client_id'] = 'window_gallery'
 config['password'] = 'password'
 
 
 class VideoToLed():
-    def __init__(self):
+    def __init__(self, username):
+        self.username = username
         self.led_array = np.array([])
         self.is_playing = False
         self.restart_flag = False
@@ -66,8 +67,8 @@ class VideoToLed():
         self.video_name = downloader.download_video(url, 'low')
         return self.video_name
         
-    def open_video_from_file(self, path, filename):
-        filepath = os.path.join(path, filename)
+    def open_video_from_file(self, filepath, filename):
+        filepath = path.join(filepath, filename)
         if self.cap:
             self.cap.release()
         self.cap = cv2.VideoCapture(filepath)
@@ -294,19 +295,32 @@ class VideoToLed():
         return np.array(led_array_seq)
     
     def send_over_mqtt(self, frame_id: str):
-        self.save_to_file(frame_id)
+        self.save_temp_sequence(frame_id)
         print('send')
         mqtt_client = MqttCore()
         mqtt_client.start(config['topic_frame_connected'], None)
-        mqtt_client.publish(config['topic_sequence'], frame_id + '#' + self.hash)
+        mqtt_client.publish(config['topic_sequence'] + frame_id, frame_id + '#' + self.hash)
         mqtt_client.stop(config['topic_frame_connected'])
-        
-    def save_to_file(self, frame_id: str):
+        return f'Successfully sent Sequence to frame {frame_id}'
+    
+    def save_temp_sequence(self, frame_id: str):
         
         sequence_array = self.get_sequence_array().astype(np.uint8)
         print(len(sequence_array)/(2*(self.led_hor + self.led_ver))/3)
         filename = frame_id + ".bin"
-        bin_file = os.path.join('apps', 'sequences', filename)
+        bin_file = path.join(FileUtils.derive_temp_folder_path(self.username), filename)
+        return self.save_to_file(sequence_array, bin_file)
+        
+    def save_sequence(self, sequence_name: str):
+        
+        sequence_array = self.get_sequence_array().astype(np.uint8)
+        print(len(sequence_array)/(2*(self.led_hor + self.led_ver))/3)
+        filename = sequence_name + ".bin"
+        bin_file = path.join(FileUtils.derive_folder_path(self.username), filename)
+        self.save_to_file(sequence_array, bin_file)
+        return f'Successfully Saved File to {filename}'
+    
+    def save_to_file(self, sequence_array, bin_file: str):
         
         h = hashlib.sha256()
         h.update(sequence_array)
@@ -325,9 +339,64 @@ class VideoToLed():
             file.close()
         self.hash = f'{h.hexdigest()}'
         print('saved file hash: ' + self.hash)
+        print('saved file to: ' + bin_file)
         return True
 
 
+class FileUtils():
+    def __init__(self, username):
+        self.username = username
+        self.folder_path = self.derive_folder_path(username)
+        if not path.exists(self.folder_path):
+            makedirs(self.folder_path)
+        self.temp_path = self.derive_temp_folder_path(username)
+        if not path.exists(self.temp_path):
+            makedirs(self.temp_path)
+        
+    def list_movies(self):
+        filenames = [f for f in listdir(self.folder_path) if path.isfile(path.join(self.folder_path, f))]
+        return filenames
+    
+    def delete_sequence(self, sequence_name: str):
+        bin_file = path.join(FileUtils.derive_folder_path(self.username), sequence_name)
+        if path.isfile(bin_file):
+            remove(bin_file)
+        else:
+            print("Error: %s file not found" % bin_file)
+        return f'Deleted Sequence {sequence_name}'
+            
+    def send_saved_sequence(self, sequence_file: str, frame_id: str):
+        bin_file = path.join(FileUtils.derive_folder_path(self.username), sequence_file)
+        print(f'sending {bin_file}')
+        h  = hashlib.sha256()
+        with open(bin_file, "rb", buffering=0) as file:    
+            while True:
+                chunk = file.read(h.block_size)
+                if not chunk:
+                    break
+                h.update(chunk)
+            file.close()
+        hash = f'{h.hexdigest()}'
+        
+        sequence_name = sequence_file.split('.')[0]
+        mqtt_client = MqttCore()
+        mqtt_client.start(config['topic_frame_connected'], None)
+        mqtt_client.publish(config['topic_sequence'] + frame_id, self.username + '/' + sequence_name + '#' + hash)
+        mqtt_client.stop(config['topic_frame_connected'])
+        
+        return f'Sent Sequence {sequence_name} to frame {frame_id}'
+    
+    @classmethod
+    def derive_folder_path(cls, username):
+        return path.join('apps', 'sequences', username)
+    
+    @classmethod
+    def derive_temp_folder_path(cls, username):
+        return path.join('apps', 'sequences')
+
+    
+    
+    
     # def stream_to_arduino(self):
     #     sequence_array = self.get_sequence_array()
     #     sec = 1 / self.fps
@@ -367,7 +436,7 @@ class VideoToLed():
     #     index = 2
     #     json_string = dumps(sequence_array, cls=NumpyArrayEncoder)
     #
-    #     ino_template_file = os.path.join('apps', 'static', 'assets', 'arduino_template.ino')
+    #     ino_template_file = join('apps', 'static', 'assets', 'arduino_template.ino')
     #     with open(ino_template_file, "r") as f:
     #         contents = f.readlines()
     #
