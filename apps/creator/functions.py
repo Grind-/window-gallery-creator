@@ -12,6 +12,7 @@ import hashlib
 from apps.creator.mqtt import MqttCore
 from apps.util.video_utils import set_brightness
 from os import listdir, makedirs, path, remove
+from PIL import Image
 
 download_destination = 'apps/static/assets/.temp'
 (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
@@ -131,17 +132,18 @@ class VideoToLed():
     def start(self):
         print('start')
         # Capture frame-by-frame
+        last_frame_time = time.time()
         self.is_playing = True
         while True:
             if self.pause_flag == False:
+                
                 if self.stop_flag:
                         self.release()
                         break
                 if self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.clip_end_frame-1 or self.restart_flag:
                     self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
                     self.restart_flag = False
-                        
-                time.sleep(1/self.fps)
+  
                 ret, video_frame = self.cap.read()
                 
                 
@@ -154,6 +156,7 @@ class VideoToLed():
                     led_arrays = self.generate_led_arrays(video_frame)
                     led_frame = self.generate_led_frame_image(led_arrays)
                     led_linear = self.generate_led_linear_image(led_arrays)
+                    separator = Image.new('RGB', (self.clip_width, 10), (39, 43, 48))
 
                     # create rectangle
                     rect_start_point = (self.rect_left, self.rect_top)
@@ -166,11 +169,15 @@ class VideoToLed():
                     video_frame = cv2.addWeighted(overlay, alpha, video_frame, 1 - alpha, 0)
                     
                     # stacking all frames
-                    frame = np.vstack((video_frame, led_frame, led_linear))
+                    frame = np.vstack((video_frame, separator, led_frame, separator, led_linear))
                     
                     # transform to jpeg
                     ret, buffer = cv2.imencode('.jpg', frame)
                     frame = buffer.tobytes()
+                    
+                    sleep_time = self.fps - (time.time() - last_frame_time)        
+                    time.sleep(1/sleep_time)
+                    last_frame_time = time.time()
                     
                     yield  (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
@@ -237,7 +244,7 @@ class VideoToLed():
         size_horizontal = led_arrays[0].shape[0]
         size_vertical = led_arrays[2].shape[0]
         img = np.zeros([size_vertical,size_horizontal,3],dtype=np.uint8)
-        img.fill(5) # or img[:] = 255
+        # img.fill(5) # or img[:] = 255
         
         # adding light effect to shine into the center of the image
         for i in range (2):
@@ -245,8 +252,40 @@ class VideoToLed():
             img[i, :] = led_arrays[1]/(i+1)
             img[:, -1-i] = led_arrays[3]/(i+1)
             img[:, i] = led_arrays[2]/(i+1)
+            
+        factor = self.clip_width/size_horizontal
+            
         img = cv2.resize(img[1:size_vertical-1, 1:size_horizontal-1], 
-                         dsize=(self.clip_width, self.clip_height), interpolation=cv2.INTER_CUBIC)
+                         dsize=(self.clip_width, int(factor*size_vertical)), interpolation=cv2.INTER_CUBIC)
+        
+        
+
+        spotlight_top_left = cv2.imread(path.join('apps', 'static', 'assets', 'img', 'preview', 'top_left.png'))
+        spotlight_top_left = cv2.resize(spotlight_top_left[1:size_vertical-1, 1:size_horizontal-1], 
+                         dsize=(self.clip_width, int(factor*size_vertical)), interpolation=cv2.INTER_CUBIC)
+        
+        spotlight_top_lright = cv2.imread(path.join('apps', 'static', 'assets', 'img', 'preview', 'top_right.png'))
+        spotlight_top_lright = cv2.resize(spotlight_top_lright[1:size_vertical-1, 1:size_horizontal-1], 
+                         dsize=(self.clip_width, int(factor*size_vertical)), interpolation=cv2.INTER_CUBIC)
+        
+        spotlight_bottom_left = cv2.imread(path.join('apps', 'static', 'assets', 'img', 'preview', 'bottom_left.png'))
+        spotlight_bottom_left = cv2.resize(spotlight_bottom_left[1:size_vertical-1, 1:size_horizontal-1], 
+                         dsize=(self.clip_width, int(factor*size_vertical)), interpolation=cv2.INTER_CUBIC)
+        
+        spotlight_bottom_right = cv2.imread(path.join('apps', 'static', 'assets', 'img', 'preview', 'bottom_right.png'))
+        spotlight_bottom_right = cv2.resize(spotlight_bottom_right[1:size_vertical-1, 1:size_horizontal-1], 
+                         dsize=(self.clip_width, int(factor*size_vertical)), interpolation=cv2.INTER_CUBIC)
+        
+        alpha = 1
+        beta_top_left = 0.8
+        beta_top_right = 0.1
+        beta_bottom_left = 0.2
+        beta_bottom_right = 0.9
+        # img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_top_left, beta=beta_top_left, gamma=0);
+        # img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_top_lright, beta=beta_top_right, gamma=0);
+        # img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_bottom_left, beta=beta_bottom_left, gamma=0);
+        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_bottom_right, beta=beta_bottom_right, gamma=0);
+        
         return img
     
     def generate_led_linear_image(self, led_arrays: []):
@@ -345,6 +384,7 @@ class VideoToLed():
 
 class FileUtils():
     def __init__(self, username):
+        self.sequences_listed = []
         self.username = username
         self.folder_path = self.derive_folder_path(username)
         if not path.exists(self.folder_path):
