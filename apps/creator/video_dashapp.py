@@ -1,5 +1,5 @@
 from flask import Flask, send_from_directory, Response
-from dash import dcc, ctx, MATCH
+from dash import dcc, ctx, MATCH, ALL
 from dash import html
 import dash_bootstrap_components as dbc
 import dash_uploader as du
@@ -17,7 +17,7 @@ from distutils.dir_util import copy_tree
 
 import logging
 log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+#log.setLevel(logging.ERROR)
 
 APP_ID = 'windwow_gallery_creator'
 URL_BASE = '/dashapp/'
@@ -181,11 +181,16 @@ def get_layout():
        dbc.Card(
             dbc.CardBody([
                 html.Div([
-                            dcc.RadioItems(['Bottom Left', 'Top Left', 'Top Right', 'Bottom Right'], 'Bottom Left',
-                                           style={"display":"flex", "gap":"20px", "align-items":"flex-end"})
+                            dcc.RadioItems(['Bottom Left', 'Top Left', 'Top Right', 'Bottom Right'], 
+                                           'Bottom Left', 
+                                           id=f'{APP_ID}_spot_selector',
+                                           inline=True
+                                           # style={"display":"flex", "gap":"20px", "align-items":"flex-end"}
+                                           )
                         ]),
                 
-                html.Div(id=f'{APP_ID}_keyframes', style={"display":"flex", "gap":"20px", "align-items":"flex-end"})
+                html.Div(id=f'{APP_ID}_keyframes', style={"display":"flex", "gap":"20px", "align-items":"flex-end"}),
+                dcc.Store(id=f'{APP_ID}_keyframes_store')
                 ]
             )
         ),
@@ -199,25 +204,23 @@ def get_layout():
             id='interval-component',
             interval=1*1000, # in milliseconds
             n_intervals=0
-        )
-        
+        )        
     ])
     
     return layout
 
-
         
-def generate_keyframes(second: int):
+def add_spotlights_dashboard(dash_app):
+    
+    def generate_keyframes(second: int):
     
         return html.Div([dcc.Slider(0, 255, 5,
                                value=0,
                                marks=None,
-                               id=f'keyframe_{second}',
+                               id={"type": "keyframe", "index": second},
                                vertical=True,
                                verticalHeight=100)],
         style= {'transform': 'scale(0.8)', 'margin-right': '-25px'})
-        
-def add_spotlights_dashboard(dash_app):
     
     @dash_app.callback(Output(f'{APP_ID}_keyframes', 'children'),
               [Input(f'{APP_ID}_t_length_input', 'value')])
@@ -226,9 +229,24 @@ def add_spotlights_dashboard(dash_app):
             seconds_length = max_sequence_length
         return [generate_keyframes(i) for i in range(int(seconds_length))]
     
+    
+
+    @dash_app.callback(
+        Output(f'{APP_ID}_keyframes_store', "data"),
+        [
+            # Input({"type": "keyframe", "index": MATCH}, "n_clicks"),
+            # Input({"type": "keyframe", "index": MATCH}, "id"),
+            Input({'type': 'keyframe', 'index': ALL}, 'value'),
+            # State(f'{APP_ID}_spot_selector', "value")
+        ],
+        prevent_initial_call=True
+    )
+    def store_keyframe_array(keyframes): 
+        kfs = keyframes
+        return keyframes
+    
+
     return dash_app 
-
-
 
                     
 def add_video_editing_dashboard(dash_app):
