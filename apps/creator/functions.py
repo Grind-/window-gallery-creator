@@ -55,10 +55,18 @@ class VideoToLed():
         self.record_flag = False
         self.black = 0
         
-        self.spot_array = None
+        self.spot_keyframes = None
         
     def get_clip_duration(self):
-        return self.clip_duration        
+        return self.clip_duration   
+    
+    def set_spot_keyframes(self, bl, tl, tr, br):
+        bl = [int(x) for x in bl.split(",")]
+        tl = [int(x) for x in tl.split(",")]
+        tr = [int(x) for x in tr.split(",")]
+        br = [int(x) for x in br.split(",")]
+        int_spot_arrays = self.interpolate_spot_arrays(bl, tl, tr, br)
+        self.spot_keyframes = [int_spot_arrays[0], int_spot_arrays[1], int_spot_arrays[2], int_spot_arrays[3]]    
             
     def load_youtube_video(self, url: str):
         video = pafy.new(url)
@@ -134,8 +142,8 @@ class VideoToLed():
     def start(self):
         print('start')
         # Capture frame-by-frame
-        if not self.spot_array:
-            self.spot_array = np.zeros((4,self.frame_count))
+        if not self.spot_keyframes:
+            self.spot_keyframes = np.zeros((4,self.frame_count))
         last_frame_time = time.time()
         self.is_playing = True
         while True:
@@ -284,10 +292,10 @@ class VideoToLed():
                          dsize=(self.clip_width, int(factor*size_vertical)), interpolation=cv2.INTER_CUBIC)
         
         alpha = 1
-        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_top_left, beta=spot_dict['top_left'], gamma=0);
-        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_top_right, beta=spot_dict['top_right'], gamma=0);
-        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_bottom_left, beta=spot_dict['bottom_left'], gamma=0);
-        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_bottom_right, beta=spot_dict['bottom_right'], gamma=0);
+        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_top_left, beta=spot_dict['top_left']/255, gamma=0);
+        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_top_right, beta=spot_dict['top_right']/255, gamma=0);
+        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_bottom_left, beta=spot_dict['bottom_left']/255, gamma=0);
+        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_bottom_right, beta=spot_dict['bottom_right']/255, gamma=0);
         
         return img
     
@@ -327,16 +335,19 @@ class VideoToLed():
                 video_frame = cv2.convertScaleAbs(video_frame, alpha=self.contrast)
                 video_frame = set_brightness(video_frame, self.brightness)
                 led_arrays = self.generate_led_arrays(video_frame)
+                spot_dict =  self.get_spot_dict_for_frame(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)))
+                spot_array = [spot_dict['bottom_left'], spot_dict['top_left'], spot_dict['top_right'], spot_dict['bottom_right']]
                 led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])),
                                       np.concatenate(led_arrays[1]),
                                       np.concatenate(led_arrays[3]),
-                                      np.concatenate(np.flipud(led_arrays[0]))])
+                                      np.concatenate(np.flipud(led_arrays[0])),
+                                      np.concatenate(spot_array)])
             else: 
                 print(f'Lost frame No {self.cap.get(cv2.CAP_PROP_POS_FRAMES)}')
                 break
         return np.array(led_array_seq)
     
-    def get_spot_arrays(self, sequence_length: int, 
+    def interpolate_spot_arrays(self,
                         bottom_left: list, 
                         top_left: list, 
                         top_right: list, 
@@ -346,7 +357,7 @@ class VideoToLed():
             j = i+1 if f > 0 else i  # Avoid index error.
             return (1-f) * inp[i] + f * inp[j]
 
-        new_len = sequence_length*self.fps
+        new_len = self.clip_end_frame - self.clip_start_frame
         
         delta = (len(bottom_left)-1) / (new_len-1)
         bottom_left = [interpolate(bottom_left, i*delta) for i in range(new_len)]
@@ -357,10 +368,10 @@ class VideoToLed():
 
     def get_spot_dict_for_frame(self, frame_number: int):
         spot_dict = {}
-        spot_dict['bottom_left'] = self.spot_array[0][frame_number]
-        spot_dict['top_left'] = self.spot_array[1][frame_number]
-        spot_dict['top_right'] = self.spot_array[2][frame_number]
-        spot_dict['bottom_right'] = self.spot_array[3][frame_number]
+        spot_dict['bottom_left'] = self.spot_keyframes[0][frame_number]
+        spot_dict['top_left'] = self.spot_keyframes[1][frame_number]
+        spot_dict['top_right'] = self.spot_keyframes[2][frame_number]
+        spot_dict['bottom_right'] = self.spot_keyframes[3][frame_number]
         return spot_dict
     
     def send_over_mqtt(self, frame_id: str):

@@ -135,7 +135,7 @@ def get_layout():
                     dcc.Slider(1, max_sequence_length, 1, 
                                id=f'{APP_ID}_t_length_input', marks=None,
                                 tooltip={"placement": "bottom", "always_visible": False}, 
-                                value=video_to_led.clip_duration),
+                                value=max_sequence_length),
                     ]),
             ]),
             dbc.Col([
@@ -190,7 +190,10 @@ def get_layout():
                         ]),
                 
                 html.Div(id=f'{APP_ID}_keyframes', style={"display":"flex", "gap":"20px", "align-items":"flex-end"}),
-                dcc.Store(id=f'{APP_ID}_keyframes_store')
+                dcc.Store(id=f'{APP_ID}_keyframes_bl_store'),
+                dcc.Store(id=f'{APP_ID}_keyframes_tl_store'),
+                dcc.Store(id=f'{APP_ID}_keyframes_tr_store'),
+                dcc.Store(id=f'{APP_ID}_keyframes_br_store')
                 ]
             )
         ),
@@ -232,20 +235,77 @@ def add_spotlights_dashboard(dash_app):
     
 
     @dash_app.callback(
-        Output(f'{APP_ID}_keyframes_store', "data"),
         [
-            # Input({"type": "keyframe", "index": MATCH}, "n_clicks"),
-            # Input({"type": "keyframe", "index": MATCH}, "id"),
+            Output(f'{APP_ID}_keyframes_bl_store', "data"),
+            Output(f'{APP_ID}_keyframes_tl_store', "data"),
+            Output(f'{APP_ID}_keyframes_tr_store', "data"),
+            Output(f'{APP_ID}_keyframes_br_store', "data"),
+        ],
+        [
             Input({'type': 'keyframe', 'index': ALL}, 'value'),
-            # State(f'{APP_ID}_spot_selector', "value")
+            State(f'{APP_ID}_spot_selector', "value"),
+            State(f'{APP_ID}_keyframes_bl_store', "data"),
+            State(f'{APP_ID}_keyframes_tl_store', "data"),
+            State(f'{APP_ID}_keyframes_tr_store', "data"),
+            State(f'{APP_ID}_keyframes_br_store', "data"),
         ],
         prevent_initial_call=True
     )
-    def store_keyframe_array(keyframes): 
-        kfs = keyframes
+    def store_keyframe_array(keyframe, spot_selector, keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br): 
+        if not keyframes_bl:
+            keyframes_bl = [0]*len(keyframe)
+        if not keyframes_tl:
+            keyframes_tl = [0]*len(keyframe)
+        if not keyframes_tr:
+            keyframes_tr = [0]*len(keyframe)
+        if not keyframes_br:
+            keyframes_br = [0]*len(keyframe)
+        if spot_selector == 'Bottom Left':
+            keyframes_bl = keyframe
+        if spot_selector == 'Top Left':
+            keyframes_tl = keyframe
+        if spot_selector == 'Top Right': 
+            keyframes_tr = keyframe
+        if spot_selector == 'Bottom Right':
+            keyframes_br = keyframe
+        return keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br
+    
+    @dash_app.callback(
+        Output(f'{APP_ID}_keyframes', 'children'),
+        [
+            Input(f'{APP_ID}_spot_selector', "value"),
+            State(f'{APP_ID}_keyframes_bl_store', "data"),
+            State(f'{APP_ID}_keyframes_tl_store', "data"),
+            State(f'{APP_ID}_keyframes_tr_store', "data"),
+            State(f'{APP_ID}_keyframes_br_store', "data")
+        ],
+        prevent_initial_call=True
+              )
+    def load_keyframes(spot_selector, keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br):
+        if spot_selector == 'Bottom Left':
+            keyframes = load_keyframes_generator(keyframes_bl)
+        if spot_selector == 'Top Left':
+            keyframes = load_keyframes_generator(keyframes_tl)
+        if spot_selector == 'Top Right': 
+            keyframes = load_keyframes_generator(keyframes_tr)
+        if spot_selector == 'Bottom Right':
+            keyframes = load_keyframes_generator(keyframes_br)
         return keyframes
     
-
+    def load_keyframes_generator(keyframes):
+        second = 0
+        keyframe_list = []
+        for i in keyframes:
+            keyframe_list.append(html.Div([dcc.Slider(0, 255, 5,
+                                   value=i,
+                                   marks=None,
+                                   id={"type": "keyframe", "index": second},
+                                   vertical=True,
+                                   verticalHeight=100)],
+                                       style= {'transform': 'scale(0.8)', 'margin-right': '-25px'}))
+            second += 1
+        return keyframe_list
+        
     return dash_app 
 
                     
@@ -336,10 +396,14 @@ def add_video_editing_dashboard(dash_app):
                 Input(f'{APP_ID}_brightness_input', 'value'),
                 Input(f'{APP_ID}_contrast_input', 'value'),
                 Input(f'{APP_ID}_black_input', 'value'),
-                Input(f'{APP_ID}_video_filename', 'value')
+                Input(f'{APP_ID}_video_filename', 'value'),
+                Input(f'{APP_ID}_keyframes_bl_store', 'data'),
+                Input(f'{APP_ID}_keyframes_tl_store', 'data'),
+                Input(f'{APP_ID}_keyframes_tr_store', 'data'),
+                Input(f'{APP_ID}_keyframes_br_store', 'data')
             ])
     def update_video(thickness, dic_of_names, clip_start, clip_length, rect_bot, rect_top, rect_left, rect_right, 
-                     brightness, contrast, black, video_filename):
+                     brightness, contrast, black, video_filename, keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br):
         rect_top = video_to_led.clip_height - rect_top
         rect_right = video_to_led.clip_width - rect_right
         clip_end = clip_start + clip_length
@@ -353,7 +417,11 @@ def add_video_editing_dashboard(dash_app):
         path_base64_string = path_base64_bytes.decode("ascii")
         filename_base64_bytes = base64.b64encode(filename_bytes)
         filename_base64_string = filename_base64_bytes.decode("ascii")
-        video_feed_url = f'{URL_BASE}video_feed/{path_base64_string}/{filename_base64_string}/{rect_bot}/{rect_top}/{rect_left}/{rect_right}/{clip_start}/{clip_end}/{thickness}/{brightness}/{contrast}/{black}'
+        keyframe_bl_string = ','.join(str(x) for x in keyframes_bl)
+        keyframe_tl_string = ','.join(str(x) for x in keyframes_tl)
+        keyframe_tr_string = ','.join(str(x) for x in keyframes_tr)
+        keyframe_br_string = ','.join(str(x) for x in keyframes_br)
+        video_feed_url = f'{URL_BASE}video_feed/{path_base64_string}/{filename_base64_string}/{rect_bot}/{rect_top}/{rect_left}/{rect_right}/{clip_start}/{clip_end}/{thickness}/{brightness}/{contrast}/{black}/{keyframe_bl_string}/{keyframe_tl_string}/{keyframe_tr_string}/{keyframe_br_string}'
         if os.path.exists(os.path.join(path, filename)):
             return html.Img(src=video_feed_url, style={'width': '500px'})
     
@@ -443,8 +511,8 @@ def add_video_editing_dashboard(dash_app):
         return payload
     
         
-    @dash_app.server.route(f'{URL_BASE}video_feed/<string:path_encoded>/<string:filename_encoded>/<rect_bot>/<rect_top>/<rect_left>/<rect_right>/<t_start>/<t_end>/<thickness>/<brightness>/<contrast>/<black>')
-    def video_feed(path_encoded, filename_encoded, rect_bot, rect_top, rect_left, rect_right, t_start, t_end, thickness,brightness, contrast, black):
+    @dash_app.server.route(f'{URL_BASE}video_feed/<string:path_encoded>/<string:filename_encoded>/<rect_bot>/<rect_top>/<rect_left>/<rect_right>/<t_start>/<t_end>/<thickness>/<brightness>/<contrast>/<black>/<keyframes_bl>/<keyframes_tl>/<keyframes_tr>/<keyframes_br>')
+    def video_feed(path_encoded, filename_encoded, rect_bot, rect_top, rect_left, rect_right, t_start, t_end, thickness,brightness, contrast, black, keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br):
         path_base64_bytes = path_encoded.encode("ascii")
         path_base64_bytes = base64.b64decode(path_base64_bytes)
         path_decoded = path_base64_bytes.decode("ascii")
@@ -456,6 +524,7 @@ def add_video_editing_dashboard(dash_app):
         video_to_led_feed.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
         video_to_led_feed.set_start_end_sec(int(t_start), int(float(t_end)))
         video_to_led_feed.set_brightness_contrast(float(brightness), int(float(contrast)), int(float(black)))
+        video_to_led_feed.set_spot_keyframes(keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br)
         if video_to_led_feed.is_playing:
             video_to_led_feed.restart()
         return Response(video_to_led_feed.start(),
