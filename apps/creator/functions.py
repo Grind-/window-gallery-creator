@@ -61,10 +61,6 @@ class VideoToLed():
         return self.clip_duration   
     
     def set_spot_keyframes(self, bl, tl, tr, br):
-        bl = [int(x) for x in bl.split(",")]
-        tl = [int(x) for x in tl.split(",")]
-        tr = [int(x) for x in tr.split(",")]
-        br = [int(x) for x in br.split(",")]
         int_spot_arrays = self.interpolate_spot_arrays(bl, tl, tr, br)
         self.spot_keyframes = [int_spot_arrays[0], int_spot_arrays[1], int_spot_arrays[2], int_spot_arrays[3]]    
             
@@ -148,7 +144,7 @@ class VideoToLed():
         self.is_playing = True
         while True:
             if self.pause_flag == False:
-                
+                last_frame_time = time.time()
                 if self.stop_flag:
                         self.release()
                         break
@@ -191,9 +187,19 @@ class VideoToLed():
                     ret, buffer = cv2.imencode('.jpg', frame)
                     frame = buffer.tobytes()
                     
-                    sleep_time = self.fps - (time.time() - last_frame_time)        
-                    time.sleep(1/sleep_time)
-                    last_frame_time = time.time()
+                    sleep_time = 1/self.fps*1000 - (time.time() - last_frame_time)*1000
+                    if sleep_time <= 0:
+                        sleep_time = 0
+                    # print('now: ' + str(time.time()))
+                    # print('last frame time: ' + str(last_frame_time))
+                    # print('sleep time: ' + str(sleep_time))
+                    # print('fps: ' + str(self.fps)) 
+                    # print('frame number: ' + str(self.cap.get(cv2.CAP_PROP_POS_FRAMES)))
+                    # print('time per frame: ' + str(1/self.fps*1000))
+                    # print('time per frame calcualted: ' + str((time.time() - last_frame_time) *1000))
+                    # print('                ')      
+                    time.sleep(sleep_time*0.001)
+                    
                     
                     yield  (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
@@ -341,7 +347,10 @@ class VideoToLed():
                                       np.concatenate(led_arrays[1]),
                                       np.concatenate(led_arrays[3]),
                                       np.concatenate(np.flipud(led_arrays[0])),
-                                      np.concatenate(spot_array)])
+                                      spot_array])
+                print(led_array_seq)
+                print(spot_array)
+                
             else: 
                 print(f'Lost frame No {self.cap.get(cv2.CAP_PROP_POS_FRAMES)}')
                 break

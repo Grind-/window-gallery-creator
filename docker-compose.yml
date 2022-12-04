@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   window-gallery-creator:
-    container_name: window-gallery-creator
+    image: "registry.gitlab.com/windowgallery/creator"
     restart: always
     env_file: .env
     build: .

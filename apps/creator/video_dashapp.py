@@ -17,7 +17,7 @@ from distutils.dir_util import copy_tree
 
 import logging
 log = logging.getLogger('werkzeug')
-#log.setLevel(logging.ERROR)
+log.setLevel(logging.ERROR)
 
 APP_ID = 'windwow_gallery_creator'
 URL_BASE = '/dashapp/'
@@ -440,11 +440,16 @@ def add_video_editing_dashboard(dash_app):
                 State(f'{APP_ID}_frame_id', 'value'),
                 State(f'{APP_ID}_brightness_input', 'value'),
                 State(f'{APP_ID}_contrast_input', 'value'),
+                State(f'{APP_ID}_keyframes_bl_store', 'data'),
+                State(f'{APP_ID}_keyframes_tl_store', 'data'),
+                State(f'{APP_ID}_keyframes_tr_store', 'data'),
+                State(f'{APP_ID}_keyframes_br_store', 'data'),
                 Input(f'{APP_ID}_black_input', 'value'),
                 Input(f'{APP_ID}_send_sequence', 'n_clicks')
             ])
     def send_to_frame(thickness, dic_of_names, clip_start, clip_length, rect_bot, rect_top, rect_left, 
-                      rect_right, video_filename, frame_id, brightness, contrast, black,  n_clicks):
+                      rect_right, video_filename, frame_id, brightness, contrast, 
+                      keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br, black,  n_clicks):
         if n_clicks:
             if clip_length+clip_start > max_sequence_length:
                 return 'Clip length too long, exceeds Video'
@@ -462,6 +467,7 @@ def add_video_editing_dashboard(dash_app):
             video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
             video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
             video_for_download.set_brightness_contrast(int(brightness), int(float(contrast)), int(float(black)))
+            video_for_download.set_spot_keyframes(keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br)
             return video_for_download.send_over_mqtt(frame_id)
         
     @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
@@ -478,11 +484,16 @@ def add_video_editing_dashboard(dash_app):
                 State(f'{APP_ID}_sequence_name', 'value'),
                 State(f'{APP_ID}_brightness_input', 'value'),
                 State(f'{APP_ID}_contrast_input', 'value'),
+                State(f'{APP_ID}_keyframes_bl_store', 'data'),
+                State(f'{APP_ID}_keyframes_tl_store', 'data'),
+                State(f'{APP_ID}_keyframes_tr_store', 'data'),
+                State(f'{APP_ID}_keyframes_br_store', 'data'),
                 Input(f'{APP_ID}_black_input', 'value'),
                 Input(f'{APP_ID}_save_sequence', 'n_clicks')
             ])
     def save_sequence(thickness, dic_of_names, clip_start, clip_length, rect_bot, rect_top, rect_left, 
-                      rect_right, video_filename, sequence_name, brightness, contrast, black,  n_clicks):
+                      rect_right, video_filename, sequence_name, brightness, contrast, 
+                      keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br, black,  n_clicks):
         if n_clicks:
             if clip_length+clip_start > max_sequence_length:
                 return 'Clip length too long, exceeds Video'
@@ -498,6 +509,7 @@ def add_video_editing_dashboard(dash_app):
             video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
             video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
             video_for_download.set_brightness_contrast(int(brightness), int(float(contrast)), int(float(black)))
+            video_for_download.set_spot_keyframes(keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br)
             return video_for_download.save_sequence(sequence_name)
         
     @dash_app.callback(Output(f'{APP_ID}_video_filename', 'value'),
@@ -524,6 +536,10 @@ def add_video_editing_dashboard(dash_app):
         video_to_led_feed.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
         video_to_led_feed.set_start_end_sec(int(t_start), int(float(t_end)))
         video_to_led_feed.set_brightness_contrast(float(brightness), int(float(contrast)), int(float(black)))
+        keyframes_bl = [int(x) for x in keyframes_bl.split(",")]
+        keyframes_tl = [int(x) for x in keyframes_tl.split(",")]
+        keyframes_tr = [int(x) for x in keyframes_tr.split(",")]
+        keyframes_br = [int(x) for x in keyframes_br.split(",")]
         video_to_led_feed.set_spot_keyframes(keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br)
         if video_to_led_feed.is_playing:
             video_to_led_feed.restart()
