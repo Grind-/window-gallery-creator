@@ -252,13 +252,13 @@ def add_spotlights_dashboard(dash_app):
         prevent_initial_call=True
     )
     def store_keyframe_array(keyframe, spot_selector, keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br): 
-        if not keyframes_bl:
+        if not keyframes_bl or len(keyframes_bl) != len(keyframe):
             keyframes_bl = [0]*len(keyframe)
-        if not keyframes_tl:
+        if not keyframes_tl  or len(keyframes_tl) != len(keyframe):
             keyframes_tl = [0]*len(keyframe)
-        if not keyframes_tr:
+        if not keyframes_tr  or len(keyframes_tr) != len(keyframe):
             keyframes_tr = [0]*len(keyframe)
-        if not keyframes_br:
+        if not keyframes_br  or len(keyframes_br) != len(keyframe):
             keyframes_br = [0]*len(keyframe)
         if spot_selector == 'Bottom Left':
             keyframes_bl = keyframe
