@@ -164,7 +164,7 @@ class VideoToLed():
 
                     # create led/spot arrays and frame
                     led_arrays = self.generate_led_arrays(video_frame)
-                    spot_dict =  self.get_spot_dict_for_frame(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)))
+                    spot_dict =  self.get_spot_dict_for_frame(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))-self.clip_start_frame)
                     
                     led_frame = self.generate_led_frame_image(led_arrays, spot_dict)
                     led_linear = self.generate_led_linear_image(led_arrays)
