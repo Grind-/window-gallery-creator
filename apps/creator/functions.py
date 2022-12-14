@@ -326,7 +326,6 @@ class VideoToLed():
     
     def get_sequence_array(self):
         led_array_seq = []
-        spot_array_seq = []
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.clip_start_frame)
         while True:
             # print(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
@@ -342,8 +341,14 @@ class VideoToLed():
                 video_frame = cv2.convertScaleAbs(video_frame, alpha=self.contrast)
                 video_frame = set_brightness(video_frame, self.brightness)
                 led_arrays = self.generate_led_arrays(video_frame)
-                spot_dict =  self.get_spot_dict_for_frame(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)))
-                spot_array = [spot_dict['bottom_left'], spot_dict['top_left'], spot_dict['top_right'], spot_dict['bottom_right']]               
+                spot_dict =  self.get_spot_dict_for_frame(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))-self.clip_start_frame)
+                spot_array = [spot_dict['bottom_left'], spot_dict['top_left'], spot_dict['top_right'], spot_dict['bottom_right']]            
+                new_array_seq = np.concatenate([np.concatenate(np.flipud(led_arrays[2])),
+                                      np.concatenate(led_arrays[1]),
+                                      np.concatenate(led_arrays[3]),
+                                      np.concatenate(np.flipud(led_arrays[0])),
+                                      spot_array])
+                print(new_array_seq.shape)
                 led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])),
                                       np.concatenate(led_arrays[1]),
                                       np.concatenate(led_arrays[3]),
@@ -369,18 +374,18 @@ class VideoToLed():
         new_len = self.clip_end_frame - self.clip_start_frame
         
         delta = (len(bottom_left)-1) / (new_len-1)
-        bottom_left = [interpolate(bottom_left, i*delta) for i in range(new_len)]
-        top_left = [interpolate(top_left, i*delta) for i in range(new_len)]
-        top_right = [interpolate(top_right, i*delta) for i in range(new_len)]
-        bottom_right = [interpolate(bottom_right, i*delta) for i in range(new_len)] 
+        bottom_left = [interpolate(bottom_left, i*delta) for i in range(new_len-1)]
+        top_left = [interpolate(top_left, i*delta) for i in range(new_len-1)]
+        top_right = [interpolate(top_right, i*delta) for i in range(new_len-1)]
+        bottom_right = [interpolate(bottom_right, i*delta) for i in range(new_len-1)] 
         return np.array([bottom_left, top_left,top_right, bottom_right])
 
     def get_spot_dict_for_frame(self, frame_number: int):
         spot_dict = {}
-        spot_dict['bottom_left'] = self.spot_keyframes[0][frame_number]
-        spot_dict['top_left'] = self.spot_keyframes[1][frame_number]
-        spot_dict['top_right'] = self.spot_keyframes[2][frame_number]
-        spot_dict['bottom_right'] = self.spot_keyframes[3][frame_number]
+        spot_dict['bottom_left'] = self.spot_keyframes[0][frame_number - 1]
+        spot_dict['top_left'] = self.spot_keyframes[1][frame_number - 1]
+        spot_dict['top_right'] = self.spot_keyframes[2][frame_number - 1]
+        spot_dict['bottom_right'] = self.spot_keyframes[3][frame_number - 1]
         return spot_dict
     
     def send_over_mqtt(self, frame_id: str):
@@ -397,7 +402,7 @@ class VideoToLed():
         led_strip_array = self.get_sequence_array()
         led_strip_array = led_strip_array.astype(np.uint8)
         # spot_array = spot_array.astype(np.uint8)
-        # print((len(sequence_array)-(4*(self.clip_end_frame-self.clip_start_frame)))/(2*(self.led_hor + self.led_ver))/3)
+        print((len(led_strip_array)-(4*(self.clip_end_frame-self.clip_start_frame)))/(2*(self.led_hor + self.led_ver))/3)
         filename_led_strip = frame_id + ".bin"
         # filename_spot = frame_id + "_spot.bin"
         led_strip_bin_file = path.join(FileUtils.derive_temp_folder_path(self.username), filename_led_strip)
@@ -442,7 +447,8 @@ class VideoToLed():
         print('saved file to: ' + bin_file)
         return True
 
-
+    def validate_settings(self):
+        return 'ok'
 
 class FileUtils():
     def __init__(self, username):

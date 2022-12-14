@@ -222,7 +222,7 @@ def add_spotlights_dashboard(dash_app):
                                marks=None,
                                id={"type": "keyframe", "index": second},
                                vertical=True,
-                               verticalHeight=100)],
+                               verticalHeight=200)],
         style= {'transform': 'scale(0.8)', 'margin-right': '-25px'})
     
     @dash_app.callback(Output(f'{APP_ID}_keyframes', 'children'),
@@ -451,8 +451,6 @@ def add_video_editing_dashboard(dash_app):
                       rect_right, video_filename, frame_id, brightness, contrast, 
                       keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br, black,  n_clicks):
         if n_clicks:
-            if clip_length+clip_start > max_sequence_length:
-                return 'Clip length too long, exceeds Video'
             clip_end = clip_start + clip_length
             if not frame_id:
                 return 'Please enter Frame ID'
@@ -468,6 +466,9 @@ def add_video_editing_dashboard(dash_app):
             video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
             video_for_download.set_brightness_contrast(int(brightness), int(float(contrast)), int(float(black)))
             video_for_download.set_spot_keyframes(keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br)
+            validation = video_for_download.validate_settings()
+            if validation != 'ok':
+                return validation
             return video_for_download.send_over_mqtt(frame_id)
         
     @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
@@ -495,8 +496,6 @@ def add_video_editing_dashboard(dash_app):
                       rect_right, video_filename, sequence_name, brightness, contrast, 
                       keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br, black,  n_clicks):
         if n_clicks:
-            if clip_length+clip_start > max_sequence_length:
-                return 'Clip length too long, exceeds Video'
             clip_end = clip_start + clip_length
             rect_top = video_to_led.clip_height - rect_top
             rect_right = video_to_led.clip_width - rect_right
@@ -510,6 +509,9 @@ def add_video_editing_dashboard(dash_app):
             video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
             video_for_download.set_brightness_contrast(int(brightness), int(float(contrast)), int(float(black)))
             video_for_download.set_spot_keyframes(keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br)
+            validation = video_for_download.validate_settings()
+            if validation != 'ok':
+                return validation
             return video_for_download.save_sequence(sequence_name)
         
     @dash_app.callback(Output(f'{APP_ID}_video_filename', 'value'),
