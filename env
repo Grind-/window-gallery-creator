@@ -6,6 +6,9 @@ FLASK_APP=run.py
 FLASK_ENV=production
 SECRET_KEY=YOUR_SUPER_KEY
 
+# Gunicorn ENV
+GUNICORN_WORKERS = 4
+
 # If DEBUG=False (production mode)
 DB_ENGINE=mysql
 DB_NAME=appseed_db

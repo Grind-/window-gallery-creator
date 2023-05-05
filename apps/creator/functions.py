@@ -23,6 +23,7 @@ config['topic_sequence'] = '/sequence/'#  + config['frame_id']
 config['topic_frame_connected'] = '/frame_connected/'
 config['client_id'] = 'window_gallery'
 config['password'] = 'password'
+config['topic_config'] = '/config/'
 
 
 class VideoToLed():
@@ -449,6 +450,16 @@ class VideoToLed():
 
     def validate_settings(self):
         return 'ok'
+    
+class Configurator():
+    @classmethod
+    def send_config(cls, frame_id: str, led_count: int):
+        print('send config')
+        mqtt_client = MqttCore()
+        mqtt_client.start()
+        mqtt_client.publish(config['topic_config'] + frame_id, str(led_count))
+        mqtt_client.stop()
+        return f'Successfully sent Config to frame {frame_id}'
 
 class FileUtils():
     def __init__(self, username):

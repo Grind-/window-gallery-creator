@@ -18,14 +18,17 @@ pafy
 youtube-dl==2020.12.2
 moviepy
 dash==2.6.1
-dash_uploader
+dash_uploader==0.7.0a1
 dash_extensions
 # pandas
 dash-bootstrap-components==0.13.1
 opencv-python-headless
-pytube
+git+https://github.com/felipeucelli/pytube.git@fix-client
+#pytube
 # scipy
 # pyserial
 authlib
 # matplotlib
 paho-mqtt
+packaging==21.3.0
+mysqlclient

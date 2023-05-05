@@ -1,0 +1,69 @@
+version: '3.8'
+services:
+
+  window-gallery-creator:
+    container_name: window-gallery-creator-test
+#    image: "registry.gitlab.com/windowgallery/creator:latest"
+    build: 
+      context: ..
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+       DEBUG: False
+       FLASK_APP: run.py
+       FLASK_ENV: production
+       SECRET_KEY: YOUR_SUPER_KEY
+       GUNICORN_WORKERS: 4
+       DB_ENGINE: mysql
+       DB_NAME: creator_db
+       # on server:
+       # DB_HOST: localhost
+       DB_HOST: db
+       DB_PORT: 5432
+       DB_USERNAME: user
+       DB_PASS: password
+    pull_policy: always
+    networks:
+      - test_db_network
+      - test_web_network
+    volumes:
+      - creator_data:/usr/share/nginx/html:ro
+      
+  nginx:
+    container_name: nginx-test
+    restart: always
+    image: "nginx:latest"
+    ports:
+      - "85:85"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+    networks:
+      - test_web_network
+    depends_on: 
+      - window-gallery-creator
+  db:
+    image: postgres:14.1-alpine
+    restart: always
+    networks:
+      - test_web_network
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    ports:
+      - '5432:5432'
+    volumes: 
+      - postgresql:/var/lib/postgresql/data
+
+
+volumes:
+  my-db:
+      
+networks:
+  test_db_network:
+    driver: bridge
+  test_web_network:
+    driver: bridge
+ 
+volumes:
+  creator_data:
+  postgresql:

@@ -26,24 +26,25 @@ class MqttCore():
     def __init__(self):
         self.config = config
 
-    def start(self, subscription_name: str, mqtt_config: dict):
-        self.subscription_name = self.derive_subscription_name(subscription_name)
+    def start(self, subscription_name: str=None, mqtt_config: dict=None):
+        if subscription_name:
+            self.subscription_name = self.derive_subscription_name(subscription_name)
+            atexit.register(self.stop, subscription_name)
+            
         self.mqtt_config = mqtt_config
 
         global mqtt_subscriber
         mqtt_subscriber = MqttSubscriberThread(self.config)
         mqtt_subscriber.start()
 
-        atexit.register(self.stop, subscription_name)
-
         if mqtt_subscriber.is_running:
             return 'Subscription running'
         else:
             return 'Subscription error'
 
-    def stop(self, subscription_name):
-
-        subscription_name = self.derive_subscription_name(subscription_name)
+    def stop(self, subscription_name: str=None):
+        if subscription_name:
+            subscription_name = self.derive_subscription_name(subscription_name)
         global mqtt_subscriber
         mqtt_subscriber.shutdown()
         return 'Subscription stopped'

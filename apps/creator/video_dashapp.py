@@ -1,21 +1,21 @@
-from flask import Flask, send_from_directory, Response
-from dash import dcc, ctx, MATCH, ALL
-from dash import html
-import dash_bootstrap_components as dbc
-import dash_uploader as du
-from dash_extensions.enrich import Dash, ServersideOutput, Output, Input, State, Trigger
-
-import os.path
-from dash.dependencies import Output, Input
-
-from pathlib import Path
-
-import moviepy.editor as mpy
-from apps.creator.functions import VideoToLed, FileUtils
 import base64
 from distutils.dir_util import copy_tree
-
 import logging
+import os.path
+from pathlib import Path
+
+from dash import dcc, ctx, MATCH, ALL
+from dash import html
+from dash.dependencies import Output, Input
+from dash_extensions.enrich import Dash, ServersideOutput, Output, Input, State, Trigger
+from flask import Flask, send_from_directory, Response
+
+from apps.creator.functions import VideoToLed, FileUtils, Configurator
+import dash_bootstrap_components as dbc
+import dash_uploader as du
+import moviepy.editor as mpy
+
+
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
@@ -27,10 +27,14 @@ max_sequence_length = 30
 username = 'TestUser'
 file_utils = FileUtils(username)
 
+root_directory = Path(*list(Path(__file__).parts[:-5]))
+
 # copy subdirectory example
 from_directory = "apps/static/assets/videos"
 to_directory = "apps/static/assets/.temp"
 copy_tree(from_directory, to_directory)
+
+
 
 video_to_led = VideoToLed(username)
 video_to_led.open_video_from_file(filepath=os.path.join('apps', 'static', 'assets', 'videos'), filename="color stripes.mp4")
@@ -173,6 +177,12 @@ def get_layout():
                                   placeholder='Sequence name',
                                   debounce=True),
                     dbc.Button('Save', id=f'{APP_ID}_save_sequence', color='primary', disabled=True),
+                ]),
+                dbc.ButtonGroup([
+                    dcc.Input(id=f'{APP_ID}_led_count', type='number', 
+                                  placeholder='LED Count',
+                                  debounce=True),
+                    dbc.Button('Configure', id=f'{APP_ID}_send_config', color='primary', disabled=True),
                 ]),
                 html.H4(id=f'{APP_ID}_status', children='')
             ]),
@@ -425,7 +435,18 @@ def add_video_editing_dashboard(dash_app):
         if os.path.exists(os.path.join(path, filename)):
             return html.Img(src=video_feed_url, style={'width': '500px'})
     
-    
+   
+    @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
+            [
+                State(f'{APP_ID}_frame_id', 'value'),
+                State(f'{APP_ID}_led_count', 'value'),
+                Input(f'{APP_ID}_send_config', 'n_clicks')
+            ])
+    def send_config(frame_id, led_count, n_clicks):
+        if n_clicks:
+            return  Configurator.send_config(frame_id, led_count)
+         
+         
     @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
             [
                 State(f'{APP_ID}_thickness_input', 'value'),
@@ -564,13 +585,24 @@ def add_video_editing_dashboard(dash_app):
             return False
         
     @dash_app.callback(
+    Output(f'{APP_ID}_send_config','disabled'),
+    [Input(f'{APP_ID}_frame_id','value'),
+     Input(f'{APP_ID}_led_count','value'),
+     State(f'{APP_ID}_frame_id','value'),
+     State(f'{APP_ID}_led_count','value')])
+    def activate_config_button(f, l, frame_id, led_count):
+        if frame_id and len(frame_id) > 4 and led_count:
+            return False
+        
+    @dash_app.callback(
     Output(f'{APP_ID}_save_sequence','disabled'),
     [Input(f'{APP_ID}_sequence_name','value')])
     def activate_save_button(sequence_name):
         if sequence_name and len(sequence_name) > 0:
             return False
 
-    return dash_app   
+    return dash_app 
+  
     
 
 
