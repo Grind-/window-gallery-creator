@@ -3,16 +3,19 @@ Created on 10.08.2022
 
 @author: jhirte
 '''
+import hashlib
+from os import listdir, makedirs, path, remove
 import time
+
+from PIL import Image
 import cv2
 import pafy
-import numpy as np
-from apps.util.youtube_downloader import YoutubeDownloader
-import hashlib
+
 from apps.creator.mqtt import MqttCore
 from apps.util.video_utils import set_brightness
-from os import listdir, makedirs, path, remove
-from PIL import Image
+from apps.util.youtube_downloader import YoutubeDownloader
+import numpy as np
+
 
 download_destination = 'apps/static/assets/.temp'
 (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
@@ -23,7 +26,8 @@ config['topic_sequence'] = '/sequence/'#  + config['frame_id']
 config['topic_frame_connected'] = '/frame_connected/'
 config['client_id'] = 'window_gallery'
 config['password'] = 'password'
-config['topic_config'] = '/config/'
+config['topic_config'] = '/config'
+config['topic_led_count'] = '/led_count'
 
 
 class VideoToLed():
@@ -135,6 +139,11 @@ class VideoToLed():
         self.contrast = contrast
         self.black = black
         
+    def set_led_count(self, led_hor: int, led_ver: int):
+        self.led_hor = led_hor
+        self.led_ver = led_ver
+        pass
+        
     
     def start(self):
         print('start')
@@ -234,7 +243,6 @@ class VideoToLed():
         frame = frame[int(self.clip_height - frame_crop_top-rt/2) : int(self.clip_height - frame_crop_bot+rt/2), 
                           int(frame_crop_left+rt/2) : int(frame_crop_right-rt/2)]
 
-        
         resized_hor = np.array(cv2.resize(frame, 
                                           dsize=(self.led_hor, int(self.clip_height/self.rect_thickness)), 
                                           interpolation=cv2.INTER_CUBIC))
@@ -457,7 +465,7 @@ class Configurator():
         print('send config')
         mqtt_client = MqttCore()
         mqtt_client.start()
-        mqtt_client.publish(config['topic_config'] + frame_id, str(led_count))
+        mqtt_client.publish(f"{config['topic_config']}{config['topic_led_count']}/{frame_id}", str(led_count))
         mqtt_client.stop()
         return f'Successfully sent Config to frame {frame_id}'
 

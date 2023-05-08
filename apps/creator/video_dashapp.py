@@ -42,9 +42,29 @@ youtube_url='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler'
         
 def get_layout():
     layout = dbc.Container([
-        
         dbc.Card(
             dbc.CardBody([
+                html.H3('Frame Configuration', className="card-title"),
+                html.P('Frame ID'),
+                dcc.Input(id=f'{APP_ID}_frame_id', type='text', 
+                                          placeholder='Frame ID',
+                                          debounce=True),
+                html.P('LED Count Horizontal'),
+                dcc.Input(id=f'{APP_ID}_led_hor', type='number', 
+                              placeholder='LED Horizontal',
+                              debounce=True, value=65),
+                html.P('LED Count Vertical '),
+                dcc.Input(id=f'{APP_ID}_led_ver', type='number', 
+                              placeholder='LED Vertical',
+                              debounce=True, value=85),
+                dbc.ButtonGroup([
+                    dbc.Button('Send To Frame', id=f'{APP_ID}_send_config', color='primary', disabled=True),
+                ]),
+            ])
+        ),
+        dbc.Card(
+            dbc.CardBody([
+                html.H3('Video Loader', className="card-title"),
                 dbc.Row([
                     dbc.Col([
                         dbc.Row([
@@ -90,113 +110,111 @@ def get_layout():
 
         ]), 
         
-        dbc.Row([
-            dbc.Col([
-                dcc.Loading(
-                    html.Div(
-                        html.Div(id=f'{APP_ID}_update_video')
-                    )
-                ),
-            ]),
-            dbc.Col([
-                dbc.FormGroup([
-                    dbc.Label('Rect Bottom (px)'),
-                    dcc.Slider(0, video_to_led.clip_height, 1, 
-                               id=f'{APP_ID}_rect_bot_input', marks=None,
-                                tooltip={"placement": "bottom", "always_visible": False},
-                                value=4,),
+        dbc.Card(
+            dbc.CardBody([
+                html.H3('Video Creator', className="card-title"),
+                dbc.Row([
+                    dbc.Col([
+                        dcc.Loading(
+                            html.Div(
+                                html.Div(id=f'{APP_ID}_update_video')
+                            )
+                        ),
                     ]),
-                dbc.FormGroup([
-                    dbc.Label('Rect Top (px)'),
-                    dcc.Slider(0, video_to_led.clip_height, 1, 
-                               id=f'{APP_ID}_rect_top_input', marks=None,
-                                tooltip={"placement": "bottom", "always_visible": False},
-                                value=video_to_led.clip_height-4,),
-                    ]), 
-                dbc.FormGroup([
-                    dbc.Label('Rect Left (px)'),
-                    dcc.Slider(0, video_to_led.clip_width, 1, 
-                               id=f'{APP_ID}_rect_left_input', marks=None,
-                                tooltip={"placement": "bottom", "always_visible": False},
-                                value=4,),
-                    ]),   
-                dbc.FormGroup([
-                    dbc.Label('Rect Right (px)'),
-                    dcc.Slider(0, video_to_led.clip_width, 1,
-                                id=f'{APP_ID}_rect_right_input', marks=None,
-                                tooltip={"placement": "bottom", "always_visible": False},
-                                value=video_to_led.clip_width-4),
-                    ]),
-                dbc.FormGroup([
-                    dbc.Label('Clip Start (sec)'),
-                    dcc.Slider(0, video_to_led.clip_duration, 1, 
-                               id=f'{APP_ID}_t_start_input', marks=None,
-                                tooltip={"placement": "bottom", "always_visible": False},
-                                value=0,),
-                    ]),
-                dbc.FormGroup([
-                    dbc.Label('Clip Length (sec)'),
-                    dcc.Slider(1, max_sequence_length, 1, 
-                               id=f'{APP_ID}_t_length_input', marks=None,
-                                tooltip={"placement": "bottom", "always_visible": False}, 
-                                value=max_sequence_length),
-                    ]),
-            ]),
-            dbc.Col([
-                dbc.FormGroup([
-                    dbc.Label('Thickness (px)'),
-                    dcc.Slider(0, 20, 1, id=f'{APP_ID}_thickness_input', marks=None, value=4,
-                                tooltip={"placement": "bottom", "always_visible": False}, 
-                                disabled=True),
-                    ]),
-                dbc.FormGroup([
-                    dbc.Label('Brightness'),
-                    dcc.Slider(-1, 1, 0.01, id=f'{APP_ID}_brightness_input', marks={'0':'0'}, 
-                                tooltip={"placement": "bottom", "always_visible": False},
-                                value=0,),
-                    ]),
-                dbc.FormGroup([
-                    dbc.Label('Contrast'),
-                    dcc.Slider(1, 10, 0.1, id=f'{APP_ID}_contrast_input', marks=None, 
-                                tooltip={"placement": "bottom", "always_visible": False},
-                                value=1,),
-                    ]),
-                dbc.FormGroup([
-                    dbc.Label('Black (low)'),
-                    dcc.Slider(0, 255, 1, id=f'{APP_ID}_black_input', marks=None, value=5,
-                                tooltip={"placement": "bottom", "always_visible": False}),
-                    ]),
-                dbc.ButtonGroup([
-                    dcc.Input(id=f'{APP_ID}_frame_id', type='text', 
-                                  placeholder='Frame ID',
-                                  debounce=True),
-                    dbc.Button('Send', id=f'{APP_ID}_send_sequence', color='primary', disabled=True),
-                ]),
-                dbc.ButtonGroup([
-                    dcc.Input(id=f'{APP_ID}_sequence_name', type='text', 
-                                  placeholder='Sequence name',
-                                  debounce=True),
-                    dbc.Button('Save', id=f'{APP_ID}_save_sequence', color='primary', disabled=True),
-                ]),
-                dbc.ButtonGroup([
-                    dcc.Input(id=f'{APP_ID}_led_count', type='number', 
-                                  placeholder='LED Count',
-                                  debounce=True),
-                    dbc.Button('Configure', id=f'{APP_ID}_send_config', color='primary', disabled=True),
-                ]),
-                html.H4(id=f'{APP_ID}_status', children='')
-            ]),
             
-        ]),
+                    dbc.Col([
+                        dbc.FormGroup([
+                            dbc.Label('Rect Bottom (px)'),
+                            dcc.Slider(0, video_to_led.clip_height, 1, 
+                                       id=f'{APP_ID}_rect_bot_input', marks=None,
+                                        tooltip={"placement": "bottom", "always_visible": False},
+                                        value=4,),
+                            ]),
+                        dbc.FormGroup([
+                            dbc.Label('Rect Top (px)'),
+                            dcc.Slider(0, video_to_led.clip_height, 1, 
+                                       id=f'{APP_ID}_rect_top_input', marks=None,
+                                        tooltip={"placement": "bottom", "always_visible": False},
+                                        value=video_to_led.clip_height-4,),
+                            ]), 
+                        dbc.FormGroup([
+                            dbc.Label('Rect Left (px)'),
+                            dcc.Slider(0, video_to_led.clip_width, 1, 
+                                       id=f'{APP_ID}_rect_left_input', marks=None,
+                                        tooltip={"placement": "bottom", "always_visible": False},
+                                        value=4,),
+                            ]),   
+                        dbc.FormGroup([
+                            dbc.Label('Rect Right (px)'),
+                            dcc.Slider(0, video_to_led.clip_width, 1,
+                                        id=f'{APP_ID}_rect_right_input', marks=None,
+                                        tooltip={"placement": "bottom", "always_visible": False},
+                                        value=video_to_led.clip_width-4),
+                            ]),
+                        dbc.FormGroup([
+                            dbc.Label('Clip Start (sec)'),
+                            dcc.Slider(0, video_to_led.clip_duration, 1, 
+                                       id=f'{APP_ID}_t_start_input', marks=None,
+                                        tooltip={"placement": "bottom", "always_visible": False},
+                                        value=0,),
+                            ]),
+                        dbc.FormGroup([
+                            dbc.Label('Clip Length (sec)'),
+                            dcc.Slider(1, max_sequence_length, 1, 
+                                       id=f'{APP_ID}_t_length_input', marks=None,
+                                        tooltip={"placement": "bottom", "always_visible": False}, 
+                                        value=max_sequence_length),
+                            ]),
+                        ]),
+                    dbc.Col([
+                        dbc.FormGroup([
+                            dbc.Label('Thickness (px)'),
+                            dcc.Slider(0, 20, 1, id=f'{APP_ID}_thickness_input', marks=None, value=4,
+                                        tooltip={"placement": "bottom", "always_visible": False}, 
+                                        disabled=True),
+                            ]),
+                        dbc.FormGroup([
+                            dbc.Label('Brightness'),
+                            dcc.Slider(-1, 1, 0.01, id=f'{APP_ID}_brightness_input', marks={'0':'0'}, 
+                                        tooltip={"placement": "bottom", "always_visible": False},
+                                        value=0,),
+                            ]),
+                        dbc.FormGroup([
+                            dbc.Label('Contrast'),
+                            dcc.Slider(1, 10, 0.1, id=f'{APP_ID}_contrast_input', marks=None, 
+                                        tooltip={"placement": "bottom", "always_visible": False},
+                                        value=1,),
+                            ]),
+                        dbc.FormGroup([
+                            dbc.Label('Black (low)'),
+                            dcc.Slider(0, 255, 1, id=f'{APP_ID}_black_input', marks=None, value=5,
+                                        tooltip={"placement": "bottom", "always_visible": False}),
+                            ]),
+                        dbc.Button('Send Sequence to Frame', id=f'{APP_ID}_send_sequence', color='primary', disabled=True),
+                        html.H5('Save Sequence'),
+                        dbc.ButtonGroup([
+                            dcc.Input(id=f'{APP_ID}_sequence_name', type='text', 
+                                          placeholder='Sequence name',
+                                          debounce=True),
+                            dbc.Button('Save', id=f'{APP_ID}_save_sequence', color='primary', disabled=True),
+                        ])
+                    ]),
+                ])
+            ])
+        ),
+        
+        html.H4(id=f'{APP_ID}_status', children=''),
+            
        dbc.Card(
             dbc.CardBody([
+                html.H3('Spotlight Creator', className="card-title"),
                 html.Div([
-                            dcc.RadioItems(['Bottom Left', 'Top Left', 'Top Right', 'Bottom Right'], 
-                                           'Bottom Left', 
-                                           id=f'{APP_ID}_spot_selector',
-                                           inline=True
-                                           # style={"display":"flex", "gap":"20px", "align-items":"flex-end"}
-                                           )
+                    dcc.RadioItems(['Bottom Left', 'Top Left', 'Top Right', 'Bottom Right'], 
+                                   'Bottom Left', 
+                                   id=f'{APP_ID}_spot_selector',
+                                   inline=True
+                                   # style={"display":"flex", "gap":"20px", "align-items":"flex-end"}
+                                   )
                         ]),
                 
                 html.Div(id=f'{APP_ID}_keyframes', style={"display":"flex", "gap":"20px", "align-items":"flex-end"}),
@@ -207,12 +225,16 @@ def get_layout():
                 ]
             )
         ),
-        
-        dbc.Row([
-            dbc.Col([
-                    html.Div(id=f'{APP_ID}_live_update_sequences')
+        dbc.Card(
+            dbc.CardBody([
+                html.H3('Saved Sequences', className="card-title"),
+                dbc.Row([
+                    dbc.Col([
+                            html.Div(id=f'{APP_ID}_live_update_sequences')
+                        ])
+                    ]),
                 ])
-            ]),
+            ),
         dcc.Interval(
             id='interval-component',
             interval=1*1000, # in milliseconds
@@ -406,6 +428,8 @@ def add_video_editing_dashboard(dash_app):
                 Input(f'{APP_ID}_brightness_input', 'value'),
                 Input(f'{APP_ID}_contrast_input', 'value'),
                 Input(f'{APP_ID}_black_input', 'value'),
+                Input(f'{APP_ID}_led_hor', 'value'),
+                Input(f'{APP_ID}_led_ver', 'value'),
                 Input(f'{APP_ID}_video_filename', 'value'),
                 Input(f'{APP_ID}_keyframes_bl_store', 'data'),
                 Input(f'{APP_ID}_keyframes_tl_store', 'data'),
@@ -413,7 +437,7 @@ def add_video_editing_dashboard(dash_app):
                 Input(f'{APP_ID}_keyframes_br_store', 'data')
             ])
     def update_video(thickness, dic_of_names, clip_start, clip_length, rect_bot, rect_top, rect_left, rect_right, 
-                     brightness, contrast, black, video_filename, keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br):
+                     brightness, contrast, black, led_hor, led_ver, video_filename, keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br):
         rect_top = video_to_led.clip_height - rect_top
         rect_right = video_to_led.clip_width - rect_right
         clip_end = clip_start + clip_length
@@ -431,7 +455,7 @@ def add_video_editing_dashboard(dash_app):
         keyframe_tl_string = ','.join(str(x) for x in keyframes_tl)
         keyframe_tr_string = ','.join(str(x) for x in keyframes_tr)
         keyframe_br_string = ','.join(str(x) for x in keyframes_br)
-        video_feed_url = f'{URL_BASE}video_feed/{path_base64_string}/{filename_base64_string}/{rect_bot}/{rect_top}/{rect_left}/{rect_right}/{clip_start}/{clip_end}/{thickness}/{brightness}/{contrast}/{black}/{keyframe_bl_string}/{keyframe_tl_string}/{keyframe_tr_string}/{keyframe_br_string}'
+        video_feed_url = f'{URL_BASE}video_feed/{path_base64_string}/{filename_base64_string}/{rect_bot}/{rect_top}/{rect_left}/{rect_right}/{clip_start}/{clip_end}/{thickness}/{brightness}/{contrast}/{black}/{led_hor}/{led_ver}/{keyframe_bl_string}/{keyframe_tl_string}/{keyframe_tr_string}/{keyframe_br_string}'
         if os.path.exists(os.path.join(path, filename)):
             return html.Img(src=video_feed_url, style={'width': '500px'})
     
@@ -439,11 +463,13 @@ def add_video_editing_dashboard(dash_app):
     @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
             [
                 State(f'{APP_ID}_frame_id', 'value'),
-                State(f'{APP_ID}_led_count', 'value'),
+                State(f'{APP_ID}_led_hor', 'value'),
+                State(f'{APP_ID}_led_ver', 'value'),
                 Input(f'{APP_ID}_send_config', 'n_clicks')
             ])
-    def send_config(frame_id, led_count, n_clicks):
+    def send_config(frame_id: str, led_hor: int, led_ver: int, n_clicks):
         if n_clicks:
+            led_count = 2*(led_hor + led_ver)
             return  Configurator.send_config(frame_id, led_count)
          
          
@@ -465,12 +491,14 @@ def add_video_editing_dashboard(dash_app):
                 State(f'{APP_ID}_keyframes_tl_store', 'data'),
                 State(f'{APP_ID}_keyframes_tr_store', 'data'),
                 State(f'{APP_ID}_keyframes_br_store', 'data'),
-                Input(f'{APP_ID}_black_input', 'value'),
+                State(f'{APP_ID}_black_input', 'value'),
+                State(f'{APP_ID}_led_hor', 'value'),
+                State(f'{APP_ID}_led_ver', 'value'),
                 Input(f'{APP_ID}_send_sequence', 'n_clicks')
             ])
     def send_to_frame(thickness, dic_of_names, clip_start, clip_length, rect_bot, rect_top, rect_left, 
                       rect_right, video_filename, frame_id, brightness, contrast, 
-                      keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br, black,  n_clicks):
+                      keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br, black, led_hor, led_ver, n_clicks):
         if n_clicks:
             clip_end = clip_start + clip_length
             if not frame_id:
@@ -482,6 +510,7 @@ def add_video_editing_dashboard(dash_app):
             if video_filename:
                 filename = video_filename
             video_for_download = VideoToLed(username)
+            video_for_download.set_led_count(led_hor, led_ver)
             video_for_download.open_video_from_file(path, filename)
             video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
             video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
@@ -511,11 +540,13 @@ def add_video_editing_dashboard(dash_app):
                 State(f'{APP_ID}_keyframes_tr_store', 'data'),
                 State(f'{APP_ID}_keyframes_br_store', 'data'),
                 Input(f'{APP_ID}_black_input', 'value'),
+                State(f'{APP_ID}_led_hor', 'value'),
+                State(f'{APP_ID}_led_ver', 'value'),
                 Input(f'{APP_ID}_save_sequence', 'n_clicks')
             ])
     def save_sequence(thickness, dic_of_names, clip_start, clip_length, rect_bot, rect_top, rect_left, 
                       rect_right, video_filename, sequence_name, brightness, contrast, 
-                      keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br, black,  n_clicks):
+                      keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br, black, led_hor, led_ver, n_clicks):
         if n_clicks:
             clip_end = clip_start + clip_length
             rect_top = video_to_led.clip_height - rect_top
@@ -525,6 +556,7 @@ def add_video_editing_dashboard(dash_app):
             if video_filename:
                 filename = video_filename
             video_for_download = VideoToLed(username)
+            video_for_download.set_led_count(led_hor, led_ver)
             video_for_download.open_video_from_file(path, filename)
             video_for_download.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
             video_for_download.set_start_end_sec(int(clip_start), int(float(clip_end)))
@@ -546,8 +578,8 @@ def add_video_editing_dashboard(dash_app):
         return payload
     
         
-    @dash_app.server.route(f'{URL_BASE}video_feed/<string:path_encoded>/<string:filename_encoded>/<rect_bot>/<rect_top>/<rect_left>/<rect_right>/<t_start>/<t_end>/<thickness>/<brightness>/<contrast>/<black>/<keyframes_bl>/<keyframes_tl>/<keyframes_tr>/<keyframes_br>')
-    def video_feed(path_encoded, filename_encoded, rect_bot, rect_top, rect_left, rect_right, t_start, t_end, thickness,brightness, contrast, black, keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br):
+    @dash_app.server.route(f'{URL_BASE}video_feed/<string:path_encoded>/<string:filename_encoded>/<rect_bot>/<rect_top>/<rect_left>/<rect_right>/<t_start>/<t_end>/<thickness>/<brightness>/<contrast>/<black>/<led_hor>/<led_ver>/<keyframes_bl>/<keyframes_tl>/<keyframes_tr>/<keyframes_br>')
+    def video_feed(path_encoded, filename_encoded, rect_bot, rect_top, rect_left, rect_right, t_start, t_end, thickness,brightness, contrast, black, led_hor, led_ver, keyframes_bl, keyframes_tl, keyframes_tr, keyframes_br):
         path_base64_bytes = path_encoded.encode("ascii")
         path_base64_bytes = base64.b64decode(path_base64_bytes)
         path_decoded = path_base64_bytes.decode("ascii")
@@ -555,6 +587,7 @@ def add_video_editing_dashboard(dash_app):
         filename_base64_bytes = base64.b64decode(filename_base64_bytes)
         filename_decoded = filename_base64_bytes.decode("ascii")
         video_to_led_feed = VideoToLed(username)
+        video_to_led_feed.set_led_count(int(led_hor), int(led_ver))
         video_to_led_feed.open_video_from_file(path_decoded, filename_decoded)
         video_to_led_feed.set_rectangle(int(rect_bot), int(rect_top), int(rect_left), int(rect_right), int(thickness))
         video_to_led_feed.set_start_end_sec(int(t_start), int(float(t_end)))
