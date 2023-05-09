@@ -5,6 +5,8 @@ services:
     restart: always
     env_file: .env
     pull_policy: always
+    volumes:
+      - sequences:/apps/sequences
     networks:
       - db_network
       - web_network
@@ -20,6 +22,10 @@ services:
       - web_network
     depends_on: 
       - window-gallery-creator
+      
+volumes:
+  sequences:
+  
 networks:
   db_network:
     driver: bridge

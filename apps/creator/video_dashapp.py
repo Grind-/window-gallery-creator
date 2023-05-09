@@ -620,11 +620,13 @@ def add_video_editing_dashboard(dash_app):
     @dash_app.callback(
     Output(f'{APP_ID}_send_config','disabled'),
     [Input(f'{APP_ID}_frame_id','value'),
-     Input(f'{APP_ID}_led_count','value'),
+     Input(f'{APP_ID}_led_hor','value'),
+     Input(f'{APP_ID}_led_ver','value'),
      State(f'{APP_ID}_frame_id','value'),
-     State(f'{APP_ID}_led_count','value')])
-    def activate_config_button(f, l, frame_id, led_count):
-        if frame_id and len(frame_id) > 4 and led_count:
+     State(f'{APP_ID}_led_hor','value'),
+     State(f'{APP_ID}_led_ver','value')])
+    def activate_config_button(f, lh, lv, frame_id, led_hor, led_ver):
+        if frame_id and len(frame_id) > 4 and led_hor and led_ver:
             return False
         
     @dash_app.callback(
