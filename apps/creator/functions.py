@@ -426,7 +426,7 @@ class VideoToLed():
         led_strip_array = led_strip_array.astype(np.uint8)
         # spot_array = spot_array.astype(np.uint8)
         # print((len(sequence_array)-(4*(self.clip_end_frame-self.clip_start_frame)))/(2*(self.led_hor + self.led_ver))/3)
-        filename_led_strip = sequence_name + ".bin"
+        filename_led_strip = f"{sequence_name}_{self.led_hor}_{self.led_ver}.bin"
         # filename_spot = sequence_name + "_spot.bin"
         led_strip_bin_file = path.join(FileUtils.derive_folder_path(self.username), filename_led_strip)
         # spot_bin_file = path.join(FileUtils.derive_folder_path(self.username), filename_spot)
