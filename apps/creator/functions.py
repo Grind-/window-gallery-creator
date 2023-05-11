@@ -22,8 +22,8 @@ download_destination = 'apps/static/assets/.temp'
 
 config = {}
 config['frame_id'] = '0000001'
-config['topic_sequence'] = '/sequence/'#  + config['frame_id']
-config['topic_frame_connected'] = '/frame_connected/'
+config['topic_sequence'] = '/sequence'#  + config['frame_id']
+config['topic_frame_connected'] = '/frame_connected'
 config['client_id'] = 'window_gallery'
 config['password'] = 'password'
 config['topic_config'] = '/config'
@@ -402,7 +402,7 @@ class VideoToLed():
         print('send')
         mqtt_client = MqttCore()
         mqtt_client.start(config['topic_frame_connected'], None)
-        mqtt_client.publish(config['topic_sequence'] + frame_id, frame_id + '#' + self.hash)
+        mqtt_client.publish(frame_id + config['topic_sequence'], frame_id + '#' + self.hash)
         mqtt_client.stop(config['topic_frame_connected'])
         return f'Successfully sent Sequence to frame {frame_id}'
     
@@ -465,7 +465,7 @@ class Configurator():
         print('send config')
         mqtt_client = MqttCore()
         mqtt_client.start()
-        mqtt_client.publish(f"{config['topic_config']}{config['topic_led_count']}/{frame_id}", str(led_count))
+        mqtt_client.publish(f"{frame_id}{config['topic_config']}{config['topic_led_count']}", str(led_count))
         mqtt_client.stop()
         return f'Successfully sent Config to frame {frame_id}'
 
@@ -508,7 +508,7 @@ class FileUtils():
         sequence_name = sequence_file.split('.')[0]
         mqtt_client = MqttCore()
         mqtt_client.start(config['topic_frame_connected'], None)
-        mqtt_client.publish(config['topic_sequence'] + frame_id, self.username + '/' + sequence_name + '#' + hash)
+        mqtt_client.publish(frame_id + config['topic_sequence'], self.username + '/' + sequence_name + '#' + hash)
         mqtt_client.stop(config['topic_frame_connected'])
         
         return f'Sent Sequence {sequence_name} to frame {frame_id}'

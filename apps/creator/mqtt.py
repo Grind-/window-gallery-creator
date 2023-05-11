@@ -3,12 +3,12 @@ Created on 05.08.2022
 
 @author: jhirte
 '''
-from json import loads
-
-from threading import Thread
 import atexit
-import requests
+from json import loads
 import pickle
+from threading import Thread
+
+import requests
 
 import paho.mqtt.client as mqtt
 
@@ -17,6 +17,7 @@ config = {}
 config['frame_id'] = '0000001'
 config['topic_sequence'] = '/frame/' + config['frame_id'] + '/sequence/'
 config['topic_frame_connected'] = '/frame_connected/'
+config['topic_frame_status'] = "frame/" + config['frame_id'] + "/status"
 config['client_id'] = 'window_gallery'
 config['password'] = 'password'
 mqtt_host = "81.169.134.31"
