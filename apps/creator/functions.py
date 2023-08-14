@@ -151,10 +151,10 @@ class VideoToLed():
             led_arrays = [line_top, line_bot, line_left, line_right]
             spot_array = [0, 0, 0, 0]
             led_array_seq = np.concatenate([led_array_seq,
+                                            np.concatenate(np.flipud(led_arrays[0])),
                                             np.concatenate(np.flipud(led_arrays[2])),
                                             np.concatenate(led_arrays[1]),
                                             np.concatenate(led_arrays[3]),
-                                            np.concatenate(np.flipud(led_arrays[0])),
                                             spot_array])
         led_strip_array = np.array(led_array_seq)
         led_strip_array = led_strip_array.astype(np.uint8)
@@ -383,10 +383,10 @@ class VideoToLed():
                 #                       spot_array])
                 # print(new_array_seq.shape)
                 led_array_seq = np.concatenate([led_array_seq,
+                                                np.concatenate(np.flipud(led_arrays[0])),
                                                 np.concatenate(np.flipud(led_arrays[2])),
                                                 np.concatenate(led_arrays[1]),
                                                 np.concatenate(led_arrays[3]),
-                                                np.concatenate(np.flipud(led_arrays[0])),
                                                 spot_array])
                 # spot_array_seq = np.concatenate([spot_array_seq,
                 #                       spot_array])
