@@ -145,12 +145,13 @@ class VideoToLed():
     def calibrate(self, led_hor: int, led_ver: int, frame_id: str):
         led_array_seq = []
         for lp in range(100):
-            line_top = np.full((led_hor-1, 3), [255, 0, 0])
-            line_bot = np.full((led_hor-1, 3), [0, 0, 255])
-            line_left = line_right = np.full((led_ver-1, 3), [0, 0, 0])
+            line_top = np.full((led_hor, 3), [255, 0, 0])
+            line_bot = np.full((led_hor, 3), [0, 0, 255])
+            line_left = line_right = np.full((led_ver, 3), [0, 0, 0])
             led_arrays = [line_top, line_bot, line_left, line_right]
             spot_array = [0, 0, 0, 0]
-            led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])),
+            led_array_seq = np.concatenate([led_array_seq,
+                                            np.concatenate(np.flipud(led_arrays[2])),
                                             np.concatenate(led_arrays[1]),
                                             np.concatenate(led_arrays[3]),
                                             np.concatenate(np.flipud(led_arrays[0])),
@@ -381,11 +382,12 @@ class VideoToLed():
                 #                       np.concatenate(np.flipud(led_arrays[0])),
                 #                       spot_array])
                 # print(new_array_seq.shape)
-                led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])),
-                                      np.concatenate(led_arrays[1]),
-                                      np.concatenate(led_arrays[3]),
-                                      np.concatenate(np.flipud(led_arrays[0])),
-                                      spot_array])
+                led_array_seq = np.concatenate([led_array_seq,
+                                                np.concatenate(np.flipud(led_arrays[2])),
+                                                np.concatenate(led_arrays[1]),
+                                                np.concatenate(led_arrays[3]),
+                                                np.concatenate(np.flipud(led_arrays[0])),
+                                                spot_array])
                 # spot_array_seq = np.concatenate([spot_array_seq,
                 #                       spot_array])
             else: 

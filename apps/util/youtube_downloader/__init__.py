@@ -29,9 +29,6 @@ class YoutubeDownloader:
             print(f'{resolution} error {ex}, trying with low resolution ...')
             stream = self.video.streams.get_by_itag(18)
             stream.download(f'{self.destination }')
-        if os.stat("file").st_size <= 10:
-            print(f'Error, File too small')
-            return "File too small"
         print(f'Finished downloading: {fln}')
         return stream.default_filename
 
