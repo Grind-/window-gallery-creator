@@ -29,13 +29,6 @@ file_utils = FileUtils(username)
 
 root_directory = Path(*list(Path(__file__).parts[:-5]))
 
-# copy subdirectory example
-from_directory = "apps/static/assets/videos"
-to_directory = "apps/static/assets/.temp"
-copy_tree(from_directory, to_directory)
-
-
-
 video_to_led = VideoToLed(username)
 video_to_led.open_video_from_file(filepath=os.path.join('apps', 'static', 'assets', 'videos'), filename="color stripes.mp4")
 youtube_url='https://www.youtube.com/watch?v=KM5kaH-y43Q&ab_channel=PixCycler' 
