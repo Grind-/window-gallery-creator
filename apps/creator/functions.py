@@ -9,7 +9,6 @@ import time
 
 from PIL import Image
 import cv2
-import pafy
 
 from apps.creator.mqtt import MqttCore
 from apps.util.video_utils import set_brightness
@@ -70,13 +69,12 @@ class VideoToLed():
         self.spot_keyframes = [int_spot_arrays[0], int_spot_arrays[1], int_spot_arrays[2], int_spot_arrays[3]]    
             
     def load_youtube_video(self, url: str):
-        video = pafy.new(url)
-        video_length = video.length
+        downloader = YoutubeDownloader(url)
+        video_length = downloader.video.length
         if video_length > 12000:
             return 'video is too long, choose one with less than 5 minutes'
-        downloader = YoutubeDownloader()
         downloader.choose_destination(download_destination)
-        self.video_name = downloader.download_video(url, 'low')
+        self.video_name = downloader.download_video('low')
         return self.video_name
         
     def open_video_from_file(self, filepath, filename):
@@ -307,10 +305,10 @@ class VideoToLed():
                          dsize=(self.clip_width, int(factor*size_vertical)), interpolation=cv2.INTER_CUBIC)
         
         alpha = 1
-        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_top_left, beta=spot_dict['top_left']/255, gamma=0);
-        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_top_right, beta=spot_dict['top_right']/255, gamma=0);
-        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_bottom_left, beta=spot_dict['bottom_left']/255, gamma=0);
-        img = cv2.addWeighted( src1=img, alpha=alpha, src2=spotlight_bottom_right, beta=spot_dict['bottom_right']/255, gamma=0);
+        img = cv2.addWeighted(src1=img, alpha=alpha, src2=spotlight_top_left, beta=spot_dict['top_left']/255, gamma=0)
+        img = cv2.addWeighted(src1=img, alpha=alpha, src2=spotlight_top_right, beta=spot_dict['top_right']/255, gamma=0)
+        img = cv2.addWeighted(src1=img, alpha=alpha, src2=spotlight_bottom_left, beta=spot_dict['bottom_left']/255, gamma=0)
+        img = cv2.addWeighted(src1=img, alpha=alpha, src2=spotlight_bottom_right, beta=spot_dict['bottom_right']/255, gamma=0)
         
         return img
     

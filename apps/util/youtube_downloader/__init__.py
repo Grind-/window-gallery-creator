@@ -1,17 +1,25 @@
 import os
 import pytube
 
+
+
+
+
 fln = ''  # file name to be used while converting to MP3
 
-class YoutubeDownloader():
-    def __init__(self):
+class YoutubeDownloader:
+    def __init__(self, url):
         self.destination = 'temp'
+        self.video = pytube.YouTube(url)
+        print('video description: ', self.video.description)
+        print('rating', self.video.rating)
+        print('length', self.video.length)
+        print('views', self.video.views)
     
-    def download_video(self, url, resolution):
+    def download_video(self, resolution):
         print('Fetching file ...')
         itag = self.choose_resolution(resolution)
-        video = pytube.YouTube(url)
-        stream = video.streams.get_by_itag(itag)
+        stream = self.video.streams.get_by_itag(itag)
         global fln
         fln = stream.default_filename
         try:
@@ -19,25 +27,11 @@ class YoutubeDownloader():
             stream.download(f'{self.destination }')
         except Exception as ex:
             print(f'{resolution} error {ex}, trying with low resolution ...')
-            stream = video.streams.get_by_itag(18)
+            stream = self.video.streams.get_by_itag(18)
             stream.download(f'{self.destination }')
+        print(f'Finished downloading: {fln}')
         return stream.default_filename
-    
-    def download_videos(self, urls, resolution):
-        x = 0
-        for url in urls:
-            x += 1
-            try:
-                print(f'nb : {x}')
-                self.download_video(url, resolution)
-            except Exception as ex:
-                print(f'Skipping ... error {ex}')
-                pass
-    
-    def download_playlist(self, url, resolution):
-        playlist = pytube.Playlist(url)
-        self.download_videos(playlist.video_urls, resolution)
-    
+
     
     def choose_resolution(self, resolution):
         if resolution in ["low", "360", "360p"]:

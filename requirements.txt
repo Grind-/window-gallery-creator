@@ -14,21 +14,15 @@ python-dotenv==0.19.2
 requests
 marshmallow
 marshmallow-sqlalchemy
-pafy
-youtube-dl==2020.12.2
+youtube-dl==2021.12.17
 moviepy
 dash==2.6.1
 dash_uploader==0.7.0a1
 dash_extensions
-# pandas
 dash-bootstrap-components==0.13.1
 opencv-python-headless
-git+https://github.com/felipeucelli/pytube.git@fix-client
-#pytube
-# scipy
-# pyserial
+git+https://github.com/Grind-/pytube.git
 authlib
-# matplotlib
 paho-mqtt
 packaging==21.3.0
 mysqlclient
