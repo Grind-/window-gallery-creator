@@ -141,7 +141,32 @@ class VideoToLed():
         self.led_hor = led_hor
         self.led_ver = led_ver
         pass
-        
+
+    def calibrate(self, led_hor: int, led_ver: int, frame_id: str):
+        led_array_seq = []
+        for lp in range(100):
+            line_top = np.full((led_hor-1, 3), [255, 0, 0])
+            line_bot = np.full((led_hor-1, 3), [0, 0, 255])
+            line_left = line_right = np.full((led_ver-1, 3), [0, 0, 0])
+            led_arrays = [line_top, line_bot, line_left, line_right]
+            spot_array = [0, 0, 0, 0]
+            led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])),
+                                            np.concatenate(led_arrays[1]),
+                                            np.concatenate(led_arrays[3]),
+                                            np.concatenate(np.flipud(led_arrays[0])),
+                                            spot_array])
+        led_strip_array = np.array(led_array_seq)
+        led_strip_array = led_strip_array.astype(np.uint8)
+        print((len(led_strip_array)-(4*(self.clip_end_frame-self.clip_start_frame)))/(2*(self.led_hor + self.led_ver))/3)
+        filename_led_strip = frame_id + ".bin"
+        led_strip_bin_file = path.join(FileUtils.derive_temp_folder_path(self.username), filename_led_strip)
+        self.save_to_file(led_strip_array, led_strip_bin_file)
+        print(f'Sending calibration sequence with horizontal: {led_hor} and vertical: {led_ver}')
+        mqtt_client = MqttCore()
+        mqtt_client.start(config['topic_frame_connected'], None)
+        mqtt_client.publish(frame_id + config['topic_sequence'], frame_id + '#' + self.hash)
+        mqtt_client.stop(config['topic_frame_connected'])
+        return f'Successfully sent Calibration Sequence to frame {frame_id}'
     
     def start(self):
         print('start')
@@ -350,12 +375,12 @@ class VideoToLed():
                 led_arrays = self.generate_led_arrays(video_frame)
                 spot_dict =  self.get_spot_dict_for_frame(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))-self.clip_start_frame)
                 spot_array = [spot_dict['bottom_left'], spot_dict['top_left'], spot_dict['top_right'], spot_dict['bottom_right']]            
-                new_array_seq = np.concatenate([np.concatenate(np.flipud(led_arrays[2])),
-                                      np.concatenate(led_arrays[1]),
-                                      np.concatenate(led_arrays[3]),
-                                      np.concatenate(np.flipud(led_arrays[0])),
-                                      spot_array])
-                print(new_array_seq.shape)
+                # new_array_seq = np.concatenate([np.concatenate(np.flipud(led_arrays[2])),
+                #                       np.concatenate(led_arrays[1]),
+                #                       np.concatenate(led_arrays[3]),
+                #                       np.concatenate(np.flipud(led_arrays[0])),
+                #                       spot_array])
+                # print(new_array_seq.shape)
                 led_array_seq = np.concatenate([led_array_seq, np.concatenate(np.flipud(led_arrays[2])),
                                       np.concatenate(led_arrays[1]),
                                       np.concatenate(led_arrays[3]),

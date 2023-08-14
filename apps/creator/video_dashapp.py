@@ -51,7 +51,8 @@ def get_layout():
                               placeholder='LED Vertical',
                               debounce=True, value=85),
                 dbc.ButtonGroup([
-                    dbc.Button('Send To Frame', id=f'{APP_ID}_send_config', color='primary', disabled=True),
+                    dbc.Button('Send LED Configuration To Frame', id=f'{APP_ID}_send_config', color='primary', disabled=True),
+                    dbc.Button('Send Calibration Sequence To Frame', id=f'{APP_ID}_send_calibration', color='primary', disabled=False),
                 ]),
             ])
         ),
@@ -389,7 +390,7 @@ def add_video_editing_dashboard(dash_app):
         Input({"type": "delete_button", "index": MATCH}, "n_clicks"),
         State({"type": "delete_button", "index": MATCH}, "id"),
     )
-    def delete_saved_sequence(n_clicks, id):
+    def delete_saved_sequence(n_clicks, id: dict):
         if n_clicks:
             sequence_filename = id['index']
             file_utils.delete_sequence(sequence_filename)
@@ -401,7 +402,7 @@ def add_video_editing_dashboard(dash_app):
         State({"type": "send_button", "index": MATCH}, "id"),
         State(f'{APP_ID}_frame_id', 'value'),
     )       
-    def send_saved_sequence(n_clicks, id: str, frame_id: str):
+    def send_saved_sequence(n_clicks, id: dict, frame_id: str):
         if n_clicks:
             sequence_filename = id['index']
             file_utils.send_saved_sequence(sequence_filename, frame_id)
@@ -463,7 +464,21 @@ def add_video_editing_dashboard(dash_app):
     def send_config(frame_id: str, led_hor: int, led_ver: int, n_clicks):
         if n_clicks:
             led_count = 2*(led_hor + led_ver)
-            return  Configurator.send_config(frame_id, led_count)
+            return Configurator.send_config(frame_id, led_count)
+
+    @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
+                       [
+                           State(f'{APP_ID}_frame_id', 'value'),
+                           State(f'{APP_ID}_led_hor', 'value'),
+                           State(f'{APP_ID}_led_ver', 'value'),
+                           Input(f'{APP_ID}_send_calibration', 'n_clicks')
+                       ])
+    def send_calibration(frame_id: str, led_hor: int, led_ver: int, n_clicks):
+        if n_clicks:
+            if not frame_id:
+                return 'Please enter Frame ID'
+            video_2_led = VideoToLed(username)
+            return video_2_led.calibrate(led_hor=led_hor, led_ver=led_ver, frame_id=frame_id)
          
          
     @dash_app.callback(Output(f'{APP_ID}_status', 'children'),
